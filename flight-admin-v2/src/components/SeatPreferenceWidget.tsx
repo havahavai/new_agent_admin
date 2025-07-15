@@ -55,8 +55,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-// import SeatStrategyEditor from './SeatStrategyEditor'
-// import SeatMapVisualization from './SeatMapVisualization'
+import SeatStrategyEditor from './SeatStrategyEditor'
+import SeatMapVisualization from './SeatMapVisualization'
 
 export interface SeatStrategy {
   id: string
