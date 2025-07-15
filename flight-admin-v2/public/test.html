@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #22c55e;
+            font-weight: bold;
+        }
+        .info {
+            color: #3b82f6;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="success">✅ Server is Working!</h1>
+        <p>If you can see this page, the Vite development server is running correctly.</p>
+        
+        <div class="info">
+            <h3>🔧 Debug Information:</h3>
+            <ul>
+                <li>Server: Vite Development Server</li>
+                <li>Port: 5173</li>
+                <li>Status: Running</li>
+                <li>Time: <span id="time"></span></li>
+            </ul>
+        </div>
+        
+        <div class="info">
+            <h3>🚀 Next Steps:</h3>
+            <ul>
+                <li><a href="/">Go to Main App</a></li>
+                <li><a href="/account">Go to Account Page</a></li>
+                <li><a href="/passengers">Go to Passengers Page</a></li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>
