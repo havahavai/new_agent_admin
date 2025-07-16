@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Wallet, Plus, LogOut } from 'lucide-react'
+import { Wallet, Plus, LogOut, User, Phone, Mail } from 'lucide-react'
 import { useState } from 'react'
 // import SeatPreferenceWidgetSimple from '@/components/SeatPreferenceWidgetSimple'
 import SimpleSeatWidget from '@/components/SimpleSeatWidget'
@@ -40,6 +40,53 @@ const Account = () => {
         </Button>
       </div>
 
+      {/* User Profile Widget */}
+      <Card className="w-full">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center text-gray-900 text-lg">
+            <User className="mr-2 h-5 w-5 flex-shrink-0" />
+            Profile Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Company Name</p>
+                <p className="text-lg font-semibold text-gray-900">Explera Vacations</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Phone className="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Contact Number</p>
+                <p className="text-lg font-semibold text-gray-900">919737332299</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Mail className="h-5 w-5 text-purple-600" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Email Address</p>
+                <p className="text-lg font-semibold text-gray-900">explera.surat@gmail.com</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Balance Widget */}
       <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white w-full">
         <CardHeader className="pb-4">
@@ -51,7 +98,7 @@ const Account = () => {
         <CardContent className="pt-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-2xl sm:text-3xl font-bold">${balance.toFixed(2)}</div>
+              <div className="text-2xl sm:text-3xl font-bold">₹{balance.toFixed(2)}</div>
               <p className="text-blue-100 text-sm">Available for bookings</p>
             </div>
             <div className="flex flex-col space-y-2 sm:items-end">

@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from './card'
 import { Badge } from './badge'
-import { Plane } from 'lucide-react'
+import { Plane, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface Flight {
@@ -21,7 +21,7 @@ export interface Flight {
   aircraft: string
   gate?: string
   delay?: number // in minutes
-  webCheckinStatus: 'Completed' | 'Scheduled' | 'Failed' | 'In Progress'
+  webCheckinStatus: 'Completed' | 'Scheduled' | 'Failed' | 'In Progress' | 'Document Pending'
   flightType: 'International' | 'Domestic'
 }
 
@@ -54,6 +54,8 @@ export const FlightList: React.FC<FlightListProps> = ({
         return 'bg-red-100 text-red-800'
       case 'In Progress':
         return 'bg-yellow-100 text-yellow-800'
+      case 'Document Pending':
+        return 'bg-orange-100 text-orange-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -118,11 +120,19 @@ export const FlightList: React.FC<FlightListProps> = ({
               <div className="block md:hidden space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold text-gray-900">{flight.route.from} → {flight.route.to}</div>
+                    <div className="font-semibold text-gray-900">{flight.flightNumber}</div>
+                    <div className="text-sm text-gray-600">{flight.route.fromCode} → {flight.route.toCode}</div>
                   </div>
                   <Badge className={getFlightTypeColor(flight.flightType)}>
                     {flight.flightType}
                   </Badge>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <Users className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">{flight.passengers} passengers</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -139,10 +149,17 @@ export const FlightList: React.FC<FlightListProps> = ({
               <div className="hidden md:flex md:items-center md:justify-between">
                 <div className="flex items-center space-x-6 flex-1">
                   <div>
-                    <div className="font-semibold text-gray-900">{flight.route.from} → {flight.route.to}</div>
+                    <div className="font-semibold text-gray-900">{flight.flightNumber}</div>
+                    <div className="text-sm text-gray-600">{flight.route.fromCode} → {flight.route.toCode}</div>
                   </div>
 
                   <div className="flex items-center space-x-4">
+                    <div className="text-sm">
+                      <div className="text-gray-500 flex items-center space-x-1">
+                        <Users className="h-4 w-4" />
+                        <span>{flight.passengers} passengers</span>
+                      </div>
+                    </div>
                     <div className="text-sm">
                       <div className="text-gray-500">Web Check-in</div>
                       <Badge className={getWebCheckinStatusColor(flight.webCheckinStatus)} variant="outline">

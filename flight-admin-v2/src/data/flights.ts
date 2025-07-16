@@ -82,7 +82,7 @@ const mockFlights: Flight[] = [
   // Today's flights
   {
     id: 'FL001',
-    flightNumber: 'AA1234',
+    flightNumber: 'AI 675',
     route: {
       from: 'New York',
       to: 'Los Angeles',
@@ -92,7 +92,7 @@ const mockFlights: Flight[] = [
     departure: '08:30 AM',
     arrival: '11:45 AM',
     status: 'On Time',
-    passengers: 156,
+    passengers: 4,
     aircraft: 'Boeing 737-800',
     gate: 'A12',
     webCheckinStatus: 'Completed',
@@ -110,7 +110,7 @@ const mockFlights: Flight[] = [
     departure: '10:15 AM',
     arrival: '02:30 PM',
     status: 'Delayed',
-    passengers: 142,
+    passengers: 2,
     aircraft: 'Airbus A320',
     gate: 'B8',
     delay: 25,
@@ -129,7 +129,7 @@ const mockFlights: Flight[] = [
     departure: '02:45 PM',
     arrival: '05:20 PM',
     status: 'Boarding',
-    passengers: 178,
+    passengers: 6,
     aircraft: 'Boeing 757-200',
     gate: 'C15',
     webCheckinStatus: 'Scheduled',
@@ -147,7 +147,7 @@ const mockFlights: Flight[] = [
     departure: '06:20 PM',
     arrival: '09:45 PM',
     status: 'On Time',
-    passengers: 134,
+    passengers: 3,
     aircraft: 'Boeing 737-700',
     gate: 'D22',
     webCheckinStatus: 'Failed',
@@ -165,11 +165,29 @@ const mockFlights: Flight[] = [
     departure: '08:10 PM',
     arrival: '09:30 PM',
     status: 'On Time',
-    passengers: 189,
+    passengers: 8,
     aircraft: 'Airbus A321',
     gate: 'E7',
     webCheckinStatus: 'Completed',
     flightType: 'International'
+  },
+  {
+    id: 'FL006',
+    flightNumber: 'AI2468',
+    route: {
+      from: 'Mumbai',
+      to: 'Delhi',
+      fromCode: 'BOM',
+      toCode: 'DEL'
+    },
+    departure: '11:30 AM',
+    arrival: '01:45 PM',
+    status: 'On Time',
+    passengers: 5,
+    aircraft: 'Airbus A320',
+    gate: 'F12',
+    webCheckinStatus: 'Document Pending',
+    flightType: 'Domestic'
   }
 ]
 
@@ -199,7 +217,7 @@ export const generateFlightsForDate = (date: Date): Flight[] => {
       ...baseFlight,
       id: flightId,
       flightNumber: generateFlightNumber(daysDiff, i),
-      passengers: Math.floor(Math.random() * 100) + 80, // 80-180 passengers
+      passengers: Math.floor(Math.random() * 9) + 1, // 1-9 passengers per ticket
       status: generateRandomStatus(daysDiff, i),
       gate: generateGate(i),
       delay: undefined,
@@ -255,9 +273,10 @@ const generateGate = (index: number): string => {
 const generateWebCheckinStatus = (daysDiff: number, index: number): Flight['webCheckinStatus'] => {
   const rand = (daysDiff + index) % 10
 
-  if (rand < 4) return 'Completed'
-  if (rand < 6) return 'Scheduled'
-  if (rand < 8) return 'In Progress'
+  if (rand < 3) return 'Completed'
+  if (rand < 5) return 'Scheduled'
+  if (rand < 7) return 'In Progress'
+  if (rand < 8) return 'Document Pending'
   return 'Failed'
 }
 
