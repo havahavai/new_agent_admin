@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { User, Mail, FileCheck, FileX, Search } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Badge } from '@/components/ui/badge'
 
 const Passengers = () => {
   const navigate = useNavigate()
@@ -252,11 +253,11 @@ const Passengers = () => {
                   onClick={() => navigate(`/passengers/${passenger.id}`)}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex items-center space-x-2">
                       <div className="font-medium text-gray-900">{passenger.name}</div>
-                      <div className="text-sm text-gray-500">
-                        Flight: {passenger.flightNumber} | Seat: {passenger.seatNumber}
-                      </div>
+                      {!passenger.hasDocuments && (
+                        <Badge variant="destructive" className="ml-2">Missing Documents</Badge>
+                      )}
                     </div>
                     <div className="flex space-x-2">
                       <Button
@@ -281,7 +282,6 @@ const Passengers = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -292,8 +292,14 @@ const Passengers = () => {
                       className="cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() => navigate(`/passengers/${passenger.id}`)}
                     >
-                      <TableCell className="font-medium">{passenger.name}</TableCell>
-                      <TableCell>{passenger.email}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center space-x-2">
+                          <span>{passenger.name}</span>
+                          {!passenger.hasDocuments && (
+                            <Badge variant="destructive" className="ml-2">Missing Documents</Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
