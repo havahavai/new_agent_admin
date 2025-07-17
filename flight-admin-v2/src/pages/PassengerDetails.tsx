@@ -18,7 +18,8 @@ import {
   User,
   FileText,
   Upload,
-  Download
+  Download,
+  Settings
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
@@ -26,6 +27,7 @@ import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { countries } from '@/data/countries'
 import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError } from '@/api'
+import SimpleSeatWidget from '@/components/SimpleSeatWidget'
 
 const PassengerDetails = () => {
   const navigate = useNavigate()
@@ -602,6 +604,21 @@ const PassengerDetails = () => {
                   </p>
                 </div>
               </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Seat Preferences */}
+        <AccordionItem value="seat-preferences">
+          <AccordionTrigger className="text-left">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-5 w-5" />
+              <span>Seat Preferences</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4">
+              <SimpleSeatWidget />
             </div>
           </AccordionContent>
         </AccordionItem>
