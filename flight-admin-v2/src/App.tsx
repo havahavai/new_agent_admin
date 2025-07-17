@@ -9,6 +9,7 @@ import SeatSelection from './pages/SeatSelection'
 import SimpleSeatSelection from './pages/SimpleSeatSelection'
 import SimplifiedSeatSelection from './pages/SimplifiedSeatSelection'
 import TestPage from './pages/TestPage'
+import ApiTest from './pages/ApiTest'
 
 function App() {
   return (
@@ -18,12 +19,14 @@ function App() {
           <Route path="/" element={<TripsWorking />} />
           <Route path="/trips" element={<TripsWorking />} />
           <Route path="/trips/:flightId" element={<TripDetails />} />
+          <Route path="/trips/:flightId/:ticketId" element={<TripDetails />} />
           <Route path="/passengers" element={<Passengers />} />
           <Route path="/passengers/:id" element={<PassengerDetails />} />
           <Route path="/account" element={<Account />} />
           <Route path="/seat-selection" element={<SimplifiedSeatSelection />} />
           <Route path="/simplified-seat-selection" element={<SimplifiedSeatSelection />} />
           <Route path="/test" element={<TestPage />} />
+          <Route path="/api-test" element={<ApiTest />} />
         </Routes>
       </Layout>
     </Router>

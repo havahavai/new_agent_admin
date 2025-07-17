@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,6 +33,95 @@ import {
 import { getBookingDetails, type BookingDetails, type BookingPassenger, type BoardingPass } from '@/data/flights'
 import { BoardingPass as BoardingPassComponent } from '@/components/ui/boarding-pass'
 import { countries } from '@/data/countries'
+import { getFlightDataByIds, FlightDataByIdsResponse, ApiError } from '@/api'
+
+// Helper function to convert API response to BookingDetails format
+const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): BookingDetails => {
+  const passengers: BookingPassenger[] = apiData.passengers.map((passenger, index) => ({
+    id: `passenger-${index}`,
+    name: `${passenger.firstName} ${passenger.lastName}`,
+    email: passenger.email,
+    phone: passenger.mobileNumber,
+    seatNumber: passenger.seatNumber || '',
+    ticketClass: 'Economy', // Default since not provided in API
+    status: apiData.checkInStatus === 'FAILED' ? 'Pending' : 'Checked In' as BookingPassenger['status'],
+    isMainPassenger: index === 0,
+    dateOfBirth: passenger.dateOfBirth || new Date().toISOString(),
+    gender: (passenger.gender === 'Female' ? 'Female' : 'Male') as 'Male' | 'Female',
+    nationality: passenger.country || 'US',
+    passportNumber: passenger.documents[0]?.number || '',
+    passportIssueDate: passenger.documents[0]?.issueDate || new Date().toISOString(),
+    passportExpiry: passenger.documents[0]?.expiry || new Date().toISOString(),
+    passportIssuePlace: passenger.documents[0]?.country || 'US',
+    hasDocuments: passenger.documents.length > 0,
+    specialRequests: [],
+    boardingPass: passenger.boardingPassUrl ? {
+      id: `bp-${index}`,
+      passengerId: `passenger-${index}`,
+      flightId: 'api-flight',
+      passengerName: `${passenger.firstName} ${passenger.lastName}`,
+      flightNumber: apiData.flightNumber,
+      date: new Date(apiData.departure.time).toLocaleDateString(),
+      departure: new Date(apiData.departure.time).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      arrival: new Date(apiData.arrival.time).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      route: {
+        from: apiData.departure.city,
+        to: apiData.arrival.city,
+        fromCode: apiData.departure.airportIata,
+        toCode: apiData.arrival.airportIata
+      },
+      seatNumber: passenger.seatNumber || 'TBD',
+      gate: apiData.boardingGate || 'TBD',
+      boardingGroup: 'A',
+      ticketClass: 'Economy',
+      barcode: `${apiData.flightNumber}${passenger.firstName}${passenger.lastName}`.replace(/\s/g, '').toUpperCase(),
+      qrCode: `QR${apiData.flightNumber}${passenger.firstName}${passenger.lastName}`.replace(/\s/g, '').toUpperCase(),
+      issuedAt: new Date().toISOString()
+    } : undefined
+  }))
+
+  return {
+    pnr: apiData.pnr,
+    bookingReference: apiData.bookingReference || apiData.pnr,
+    flight: {
+      id: apiData.flightNumber,
+      flightNumber: apiData.flightNumber,
+      route: {
+        from: apiData.departure.city,
+        to: apiData.arrival.city,
+        fromCode: apiData.departure.airportIata,
+        toCode: apiData.arrival.airportIata
+      },
+      departure: new Date(apiData.departure.time).toLocaleString(),
+      arrival: new Date(apiData.arrival.time).toLocaleString(),
+      checkInStatus: apiData.checkInStatus,
+      aircraft: apiData.aircraftType,
+      gate: apiData.boardingGate || 'TBD',
+      status: apiData.checkInStatus === 'FAILED' ? 'Delayed' : 'On Time',
+      flightType: apiData.isInternational ? 'International' : 'Domestic',
+      webCheckinStatus: apiData.checkInStatus === 'FAILED' ? 'Failed' : 'Completed',
+      delay: apiData.checkInStatus === 'FAILED' ? 30 : undefined,
+      passengers: passengers.length
+    },
+    passengers,
+    totalPassengers: passengers.length,
+    checkedInPassengers: passengers.filter(p => p.status === 'Checked In').length,
+    boardedPassengers: passengers.filter(p => p.status === 'Boarded').length,
+    pendingPassengers: passengers.filter(p => p.status === 'Pending').length,
+    bookingDate: new Date().toISOString(),
+    bookingStatus: 'Confirmed' as const,
+    totalAmount: 0,
+    currency: 'USD',
+    contactEmail: passengers[0]?.email || '',
+    contactPhone: passengers[0]?.phone || ''
+  }
+}
 
 // Always editable field component
 interface EditableFieldProps {
@@ -226,20 +315,61 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
 }
 
 const TripDetails = () => {
-  const { flightId } = useParams<{ flightId: string }>()
+  const { flightId, ticketId } = useParams<{ flightId: string; ticketId?: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [apiData, setApiData] = useState<FlightDataByIdsResponse['data'] | null>(null)
 
   useEffect(() => {
-    if (flightId) {
-      console.log('TripDetails: Loading flight ID:', flightId)
-      const details = getBookingDetails(flightId)
-      console.log('TripDetails: Booking details:', details)
-      setBookingDetails(details)
-      setLoading(false)
+    const fetchFlightDetails = async () => {
+      if (!flightId) return
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Get ticketId from URL params or search params (fallback)
+        const finalTicketId = ticketId || searchParams.get('ticketId')
+
+        if (finalTicketId) {
+          // Try to fetch from API first
+          const response = await getFlightDataByIds(flightId, finalTicketId)
+
+          if ('success' in response && response.success) {
+            const apiResponse = response as FlightDataByIdsResponse
+            setApiData(apiResponse.data)
+
+            // Convert API data to BookingDetails format
+            const convertedBookingDetails = convertApiToBookingDetails(apiResponse.data)
+            setBookingDetails(convertedBookingDetails)
+          } else {
+            const errorResponse = response as ApiError
+            setError(errorResponse.message)
+            // Fallback to mock data
+            const details = getBookingDetails(flightId)
+            setBookingDetails(details)
+          }
+        } else {
+          // No ticketId, use mock data
+          const details = getBookingDetails(flightId)
+          setBookingDetails(details)
+        }
+      } catch (err) {
+        console.error('Error fetching flight details:', err)
+        setError('Failed to load flight details')
+        // Fallback to mock data
+        const details = getBookingDetails(flightId)
+        setBookingDetails(details)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [flightId])
+
+    fetchFlightDetails()
+  }, [flightId, ticketId, searchParams])
 
   const handleFieldChange = (section: string, field: string, value: string, passengerIndex?: number) => {
     if (!bookingDetails) return
@@ -821,6 +951,19 @@ const TripDetails = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                {error}. Showing fallback data.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         {/* Back button row */}
@@ -965,7 +1108,7 @@ const TripDetails = () => {
                 />
               </div>
               <div className="md:col-span-2 flex flex-wrap gap-2">
-                {flight.status !== 'Departed' && (
+                {flight.status && flight.status !== 'Departed' && (
                   <Badge className={getFlightStatusColor(flight.status)}>
                     {flight.status}
                     {flight.delay && ` (+${flight.delay}min)`}

@@ -16,13 +16,15 @@ export interface Flight {
   }
   departure: string
   arrival: string
-  status: 'On Time' | 'Delayed' | 'Boarding' | 'Departed' | 'Cancelled'
+  checkInStatus: string
   passengers: number
   aircraft: string
   gate?: string
   delay?: number // in minutes
   webCheckinStatus: 'Completed' | 'Scheduled' | 'Failed' | 'In Progress' | 'Document Pending'
   flightType: 'International' | 'Domestic'
+  ticketId?: string // Add ticketId for API navigation
+  status?: 'On Time' | 'Delayed' | 'Boarding' | 'Departed' // Add status property
 }
 
 interface FlightListProps {
@@ -38,9 +40,15 @@ export const FlightList: React.FC<FlightListProps> = ({
 }) => {
   const navigate = useNavigate()
 
-  const handleFlightClick = (flightId: string) => {
-    console.log('FlightList: Navigating to flight ID:', flightId)
-    navigate(`/trips/${flightId}`)
+  const handleFlightClick = (flight: Flight) => {
+    console.log('FlightList: Navigating to flight:', flight.id, 'ticketId:', flight.ticketId)
+    if (flight.ticketId) {
+      // Navigate with both flightId and ticketId for API data
+      navigate(`/trips/${flight.id}/${flight.ticketId}`)
+    } else {
+      // Fallback to old route for mock data
+      navigate(`/trips/${flight.id}`)
+    }
   }
 
 
@@ -113,7 +121,7 @@ export const FlightList: React.FC<FlightListProps> = ({
           <Card
             key={flight.id}
             className="hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50"
-            onClick={() => handleFlightClick(flight.id)}
+            onClick={() => handleFlightClick(flight)}
           >
             <CardContent className="p-6">
               {/* Mobile Layout */}
@@ -139,7 +147,7 @@ export const FlightList: React.FC<FlightListProps> = ({
                   <div className="text-sm">
                     <span className="text-gray-500">Web Check-in: </span>
                     <Badge className={getWebCheckinStatusColor(flight.webCheckinStatus)} variant="outline">
-                      {flight.webCheckinStatus}
+                      {flight.checkInStatus}
                     </Badge>
                   </div>
                 </div>
@@ -163,7 +171,7 @@ export const FlightList: React.FC<FlightListProps> = ({
                     <div className="text-sm">
                       <div className="text-gray-500">Web Check-in</div>
                       <Badge className={getWebCheckinStatusColor(flight.webCheckinStatus)} variant="outline">
-                        {flight.webCheckinStatus}
+                        {flight.checkInStatus}
                       </Badge>
                     </div>
                   </div>

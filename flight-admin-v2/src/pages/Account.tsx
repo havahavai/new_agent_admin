@@ -2,13 +2,57 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Wallet, Plus, LogOut, User, Phone, Mail } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 // import SeatPreferenceWidgetSimple from '@/components/SeatPreferenceWidgetSimple'
 import SimpleSeatWidget from '@/components/SimpleSeatWidget'
+import { getB2BUserInfo, B2BUserResponse, ApiError } from '@/api'
 
 const Account = () => {
   const [balance, setBalance] = useState(1250.75)
   const [addAmount, setAddAmount] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [userInfo, setUserInfo] = useState({
+    companyName: 'Explera Vacations',
+    firstName: 'User',
+    lastName: 'Name',
+    mobileNumber: '919737332299',
+    emails: ['explera.surat@gmail.com']
+  })
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await getB2BUserInfo()
+
+        if ('success' in response && response.success) {
+          const userResponse = response as B2BUserResponse
+          setUserInfo({
+            companyName: userResponse.data.companyName,
+            firstName: userResponse.data.firstName,
+            lastName: userResponse.data.lastName,
+            mobileNumber: userResponse.data.mobileNumber,
+            emails: userResponse.data.emails
+          })
+          setBalance(parseFloat(userResponse.data.currentBalance))
+        } else {
+          const errorResponse = response as ApiError
+          setError(errorResponse.message)
+          // Keep default values
+        }
+      } catch (err) {
+        console.error('Error fetching user info:', err)
+        setError('Failed to load user information')
+        // Keep default values
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserInfo()
+  }, [])
 
   const handleAddBalance = () => {
     const amount = parseFloat(addAmount)
@@ -23,8 +67,32 @@ const Account = () => {
     alert('Logout functionality would be implemented here')
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading account information...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                {error}. Showing fallback data.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Account</h1>
@@ -58,7 +126,7 @@ const Account = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Company Name</p>
-                <p className="text-lg font-semibold text-gray-900">Explera Vacations</p>
+                <p className="text-lg font-semibold text-gray-900">{userInfo.companyName}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -69,7 +137,7 @@ const Account = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Contact Number</p>
-                <p className="text-lg font-semibold text-gray-900">919737332299</p>
+                <p className="text-lg font-semibold text-gray-900">{userInfo.mobileNumber}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -80,7 +148,7 @@ const Account = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Email Address</p>
-                <p className="text-lg font-semibold text-gray-900">explera.surat@gmail.com</p>
+                <p className="text-lg font-semibold text-gray-900">{userInfo.emails[0] || 'No email available'}</p>
               </div>
             </div>
           </div>
