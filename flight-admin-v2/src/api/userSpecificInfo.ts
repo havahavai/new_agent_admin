@@ -1,11 +1,7 @@
-import {
-  UserSpecificInfoResponse,
-  ApiError,
-  getUserId,
-  JWT_TOKEN_ADMIN,
-  BASE_API_URL,
-} from "./types";
+import { UserSpecificInfoResponse, ApiError, BASE_API_URL } from "./types";
 import { handleNetworkError } from "./utils";
+import { getJwtToken } from "./auth";
+import { GetUserId } from "./utils";
 
 /**
  * API 1: Get User Specific Info
@@ -15,13 +11,14 @@ export const getUserSpecificInfo = async (
   signal?: AbortSignal
 ): Promise<UserSpecificInfoResponse | ApiError> => {
   try {
-    const userId = getUserId();
+    const jwtToken = getJwtToken();
+    const userId = GetUserId(jwtToken);
     const url = `${BASE_API_URL}/admin/getUserSpecificInfo?userId=${userId}`;
 
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        authorization: `Bearer ${JWT_TOKEN_ADMIN}`,
+        authorization: `Bearer ${jwtToken}`,
         "Content-Type": "application/json",
       },
       signal,

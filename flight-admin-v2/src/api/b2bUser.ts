@@ -1,11 +1,6 @@
-import {
-  B2BUserResponse,
-  ApiError,
-  getUserId,
-  JWT_TOKEN,
-  BASE_API_URL,
-} from "./types";
+import { B2BUserResponse, ApiError, getJwtToken, BASE_API_URL } from "./types";
 import { handleNetworkError } from "./utils";
+import { GetUserId } from "./utils";
 
 /**
  * API 3: Get B2B User Info
@@ -15,13 +10,14 @@ export const getB2BUserInfo = async (
   signal?: AbortSignal
 ): Promise<B2BUserResponse | ApiError> => {
   try {
-    const userId = getUserId();
+    const jwtToken = getJwtToken();
+    const userId = GetUserId(jwtToken);
     const url = `${BASE_API_URL}/admin/b2bUsers/user?userId=${userId}`;
 
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        authorization: `Bearer ${JWT_TOKEN}`,
+        authorization: `Bearer ${jwtToken}`,
         "Content-Type": "application/json",
       },
       signal,

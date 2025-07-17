@@ -1,6 +1,12 @@
 import { ApiError } from "./types";
 
 /**
+ * API Base URL from environment variables
+ */
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://prod-api.flyo.ai";
+
+/**
  * Utility function to handle API calls with retry logic
  */
 export const withRetry = async <T>(
@@ -96,4 +102,51 @@ export const handleNetworkError = (error: any): ApiError => {
     message: error instanceof Error ? error.message : "Unknown error occurred",
     error,
   };
+};
+
+/**
+ * Decode JWT token payload without verification (client-side safe)
+ * Note: This only decodes the payload, it doesn't verify the signature
+ */
+export const decodeJwtPayload = (token: string): any => {
+  try {
+    // Split the token into parts
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      throw new Error("Invalid JWT token format");
+    }
+
+    // Decode the payload (second part)
+    const payload = parts[1];
+
+    // Add padding if needed for base64 decoding
+    const paddedPayload = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+
+    // Decode base64url to string
+    const decodedPayload = atob(
+      paddedPayload.replace(/-/g, "+").replace(/_/g, "/")
+    );
+
+    // Parse JSON
+    return JSON.parse(decodedPayload);
+  } catch (err) {
+    console.error("Error decoding JWT payload:", err);
+    return null;
+  }
+};
+
+/**
+ * Get user ID from JWT token
+ */
+export const GetUserId = (jwtToken: string): string | number => {
+  try {
+    const decoded = decodeJwtPayload(jwtToken);
+    if (decoded && decoded.userId) {
+      return decoded.userId;
+    }
+    return "";
+  } catch (err) {
+    console.error("Error getting user ID from JWT:", err);
+    return "";
+  }
 };

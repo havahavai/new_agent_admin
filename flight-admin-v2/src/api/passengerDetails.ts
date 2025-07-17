@@ -1,10 +1,7 @@
-import {
-  PassengerDetailsResponse,
-  ApiError,
-  JWT_TOKEN_PASSENGER,
-  BASE_API_URL,
-} from "./types";
+import { PassengerDetailsResponse, ApiError, BASE_API_URL } from "./types";
 import { handleNetworkError } from "./utils";
+
+import { getJwtToken } from "./auth";
 
 /**
  * API 4: Get Users Passenger Details
@@ -15,11 +12,12 @@ export const getUsersPassengerDetails = async (
 ): Promise<PassengerDetailsResponse | ApiError> => {
   try {
     const url = `${BASE_API_URL}/passenger/getUsersPassengerDetails`;
+    const jwtToken = getJwtToken();
 
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${JWT_TOKEN_PASSENGER}`,
+        Authorization: `Bearer ${jwtToken}`,
         "Content-Type": "application/json",
       },
       signal,

@@ -132,20 +132,10 @@ export interface ApiError {
 }
 
 // Utility function to get user ID from localStorage or default
-export const getUserId = (): string => {
-  const userId = localStorage.getItem("userId");
-  return userId || "11972"; // Default fallback as specified
+export const getJwtToken = (): string => {
+  const jwtToken = localStorage.getItem("jwtToken");
+  return jwtToken || ""; // Default fallback as specified
 };
-
-// JWT tokens for different APIs
-export const JWT_TOKEN_ADMIN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYyMiwiaWF0IjoxNzQwNjM5MjYyfQ.ymTL51QJspcbEj-U5iXAw1ZbrgRWFBGT0GsuvUIJRxU";
-
-export const JWT_TOKEN_PASSENGER =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjExOTcyLCJpYXQiOjE3NTI2NzI3NzJ9.gLspml7ml4FoZziUFVnwT0K-s5tkR6FD2Li9pT_gdAI";
-
-// Default token (keeping for backward compatibility)
-export const JWT_TOKEN = JWT_TOKEN_PASSENGER;
 
 // Base API URL
 export const BASE_API_URL = "https://prod-api.flyo.ai/core/v1";
