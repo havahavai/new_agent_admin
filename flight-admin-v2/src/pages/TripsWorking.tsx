@@ -1,6 +1,72 @@
 import { useState, useEffect } from 'react'
 import { FlightList } from '@/components/ui/flight-list'
-import { getDateCarouselData, getFlightsForDate } from '@/data/flights'
+import { getUserSpecificInfo, FlightData, UserSpecificInfoResponse, ApiError } from '@/api'
+
+// Helper function to extract time from ISO string without timezone conversion
+const extractTimeFromISO = (isoString: string): string => {
+  // Extract time part from ISO string (e.g., "2025-05-16T10:00:00.000Z" -> "10:00")
+  const timePart = isoString.split('T')[1]?.split('.')[0] || isoString.split('T')[1]?.split('Z')[0]
+  if (timePart) {
+    const [hours, minutes] = timePart.split(':')
+    return `${hours}:${minutes}`
+  }
+  return isoString // fallback to original if parsing fails
+}
+
+// Helper function to group flights by departure date
+const groupFlightsByDate = (flights: FlightData[]) => {
+  const grouped: { [key: string]: FlightData[] } = {}
+
+  flights.forEach(flight => {
+    const departureDate = new Date(flight.departureTime).toDateString()
+    if (!grouped[departureDate]) {
+      grouped[departureDate] = []
+    }
+    grouped[departureDate].push(flight)
+  })
+
+  // Convert to carousel format
+  const carouselData = Object.keys(grouped).map(dateString => {
+    const date = new Date(dateString)
+    const flightsForDate = grouped[dateString]
+    return {
+      date,
+      hasFlights: flightsForDate.length > 0,
+      flightCount: flightsForDate.length
+    }
+  }).sort((a, b) => a.date.getTime() - b.date.getTime())
+
+  return carouselData
+}
+
+// Helper function to get flights for selected date
+const getFlightsForSelectedDate = (flights: FlightData[], selectedDate: Date) => {
+  const selectedDateString = selectedDate.toDateString()
+  return flights.filter(flight => {
+    const flightDate = new Date(flight.departureTime).toDateString()
+    return flightDate === selectedDateString
+  }).map(flight => ({
+    id: flight.flightId,
+    flightNumber: flight.flightNumber,
+    airline: flight.airline,
+    route: {
+      from: flight.departureAirport,
+      to: flight.arrivalAirport,
+      fromCode: flight.departureAirport,
+      toCode: flight.arrivalAirport
+    },
+    departure: extractTimeFromISO(flight.departureTime),
+    arrival: extractTimeFromISO(flight.arrivalTime),
+    checkInStatus: flight.checkInStatus,
+    passengers: parseInt(flight.numberOfPassengers),
+    aircraft: flight.airline, // Use airline as aircraft for now
+    webCheckinStatus: flight.checkInStatus === 'NONE' ? 'Scheduled' :
+                     flight.checkInStatus === 'FAILED' ? 'Failed' : 'Completed' as any,
+    flightType: flight.isInternational ? 'International' : 'Domestic' as any,
+    ticketId: flight.ticketId,
+    status: flight.checkInStatus === 'FAILED' ? 'Delayed' : 'On Time' as any
+  }))
+}
 
 // Simple date carousel component
 const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect }: any) => {
@@ -67,29 +133,91 @@ const TripsWorking = () => {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [dateCarouselData, setDateCarouselData] = useState<any[]>([])
   const [flights, setFlights] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [apiFlights, setApiFlights] = useState<FlightData[]>([])
 
+  // Fetch flights from API
   useEffect(() => {
-    const carouselData = getDateCarouselData()
-    setDateCarouselData(carouselData)
+    const fetchFlights = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await getUserSpecificInfo()
 
-    // Set initial date to first date with flights
-    const firstDateWithFlights = carouselData.find(d => d.hasFlights)
-    if (firstDateWithFlights) {
-      setSelectedDate(firstDateWithFlights.date)
+        if ('success' in response && response.success) {
+          const userResponse = response as UserSpecificInfoResponse
+          setApiFlights(userResponse.data.flightsData)
+
+          // Group flights by date and create carousel data
+          const flightsByDate = groupFlightsByDate(userResponse.data.flightsData)
+          setDateCarouselData(flightsByDate)
+
+          // Set initial date to first date with flights
+          const firstDateWithFlights = flightsByDate.find(d => d.hasFlights)
+          if (firstDateWithFlights) {
+            setSelectedDate(firstDateWithFlights.date)
+          }
+        } else {
+          const errorResponse = response as ApiError
+          setError(errorResponse.message)
+          setApiFlights([])
+          setDateCarouselData([])
+        }
+      } catch (err) {
+        console.error('Error fetching flights:', err)
+        setError('Failed to load flights')
+        setApiFlights([])
+        setDateCarouselData([])
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchFlights()
   }, [])
 
   useEffect(() => {
-    const flightsForDate = getFlightsForDate(selectedDate)
-    setFlights(flightsForDate)
-  }, [selectedDate])
+    if (apiFlights.length > 0) {
+      // Filter API flights for selected date
+      const flightsForDate = getFlightsForSelectedDate(apiFlights, selectedDate)
+      setFlights(flightsForDate)
+    } else {
+      // No flights available
+      setFlights([])
+    }
+  }, [selectedDate, apiFlights])
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading flights...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 m-4">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sticky Date Carousel */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <SimpleDateCarousel
@@ -101,10 +229,22 @@ const TripsWorking = () => {
 
       {/* Flight List */}
       <div className="flex-1 p-4">
-        <FlightList
-          flights={flights}
-          selectedDate={selectedDate}
-        />
+        {!loading && !error && dateCarouselData.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-gray-400 mb-4">
+              <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </div>
+            <p className="text-gray-600 text-lg">No flight data available</p>
+            <p className="text-gray-500 text-sm">Please check your connection and try again</p>
+          </div>
+        ) : (
+          <FlightList
+            flights={flights}
+            selectedDate={selectedDate}
+          />
+        )}
       </div>
     </div>
   )
