@@ -268,7 +268,7 @@ const PassengerDetails = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -294,8 +294,9 @@ const PassengerDetails = () => {
       {/* Header */}
       {passenger.id && (
         <>
-          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-            <div className="flex items-center space-x-4">
+          <div className="mb-6">
+            {/* Back button row */}
+            <div className="mb-4 flex items-center justify-between">
               <Button
                 variant="outline"
                 size="sm"
@@ -304,40 +305,42 @@ const PassengerDetails = () => {
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">Back to Passengers</span>
-                <span className="sm:hidden">Back</span>
               </Button>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{passenger.name}</h1>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <span>ID: {passenger.id}</span>
-                  {passenger.mainPassenger && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Main Passenger
-                    </span>
-                  )}
-                  <span>{passenger.numberOfFlights} flights</span>
+            </div>
+
+            {/* Header content row */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{passenger.name}</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-gray-600">
+                  <p>Passenger ID: <span className="font-semibold text-gray-900">{passenger.id}</span></p>
+                  <p className="flex items-center space-x-1">
+                    <span>•</span>
+                    <span>{passenger.numberOfFlights} flight{passenger.numberOfFlights !== 1 ? 's' : ''}</span>
+                  </p>
+                  <p className="flex items-center space-x-1">
+                    <span>•</span>
+                    <span>{passenger.mainPassenger ? 'Primary' : 'Secondary'} passenger</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  passenger.hasDocuments
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {passenger.hasDocuments ? '✓ Documents Complete' : '✗ Documents Missing'}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Flight Statistics */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{passenger.numberOfFlights}</div>
-              <div className="text-sm text-blue-800">Total Flights</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{passenger.hasDocuments ? '✓' : '✗'}</div>
-              <div className="text-sm text-green-800">Documents Status</div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{passenger.mainPassenger ? 'Primary' : 'Secondary'}</div>
-              <div className="text-sm text-purple-800">Passenger Type</div>
-            </div>
-          </div>
 
-          <Accordion type="single" collapsible defaultValue="personal" className="w-full">
+
+          {/* Accordion Sections */}
+          <Accordion type="single" collapsible defaultValue="personal" className="w-full space-y-4">
+            {/* Personal Information */}
             <AccordionItem value="personal">
               <AccordionTrigger className="text-left">
                 <div className="flex items-center space-x-2">
@@ -346,116 +349,129 @@ const PassengerDetails = () => {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">First Name</label>
-                  <Input
-                    value={passenger.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    className="mt-1"
-                    placeholder="Enter first name"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Last Name</label>
-                  <Input
-                    value={passenger.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    className="mt-1"
-                    placeholder="Enter last name"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                  <Input
-                    type="date"
-                    value={passenger.dateOfBirth}
-                    onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Gender</label>
-                  <Select
-                    value={passenger.gender}
-                    onValueChange={(value) => handleInputChange('gender', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select Gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <Input
-                    type="email"
-                    value={passenger.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Phone</label>
-                  <PhoneInput
-                    value={passenger.phone}
-                    onChange={(value) => handleInputChange('phone', value || '')}
-                    defaultCountry="US"
-                    className="mt-1"
-                    style={{
-                      '--PhoneInputCountryFlag-height': '1em',
-                      '--PhoneInputCountrySelectArrow-color': '#6b7280',
-                      '--PhoneInput-color--focus': '#2563eb',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Nationality</label>
-                  <Select
-                    value={passenger.nationality}
-                    onValueChange={(value) => handleInputChange('nationality', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select Nationality" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.code}>
-                          {country.nationality}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Country of Residence</label>
-                  <Select
-                    value={passenger.countryOfResidence}
-                    onValueChange={(value) => handleInputChange('countryOfResidence', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select Country of Residence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.name.toLowerCase()}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={passenger.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        className="mt-1 h-9 text-sm"
+                        placeholder="Enter first name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={passenger.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className="mt-1 h-9 text-sm"
+                        placeholder="Enter last name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Date of Birth <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="date"
+                        value={passenger.dateOfBirth ? (
+                          passenger.dateOfBirth.includes('T')
+                            ? passenger.dateOfBirth.split('T')[0]
+                            : passenger.dateOfBirth
+                        ) : ''}
+                        onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                        className="mt-1 h-9 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Gender <span className="text-red-500">*</span>
+                      </label>
+                      <Select
+                        value={passenger.gender}
+                        onValueChange={(value) => handleInputChange('gender', value)}
+                      >
+                        <SelectTrigger className="mt-1 h-9 text-sm">
+                          <SelectValue placeholder="Select Gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Email</label>
+                      <Input
+                        type="email"
+                        value={passenger.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="mt-1 h-9 text-sm"
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Phone Number</label>
+                      <PhoneInput
+                        value={passenger.phone}
+                        onChange={(value) => handleInputChange('phone', value || '')}
+                        defaultCountry="IN"
+                        className="mt-1"
+                        style={{
+                          '--PhoneInputCountryFlag-height': '1em',
+                          '--PhoneInputCountrySelectArrow-color': '#6b7280',
+                          '--PhoneInput-color--focus': '#2563eb',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Nationality</label>
+                      <Select
+                        value={passenger.nationality}
+                        onValueChange={(value) => handleInputChange('nationality', value)}
+                      >
+                        <SelectTrigger className="mt-1 h-9 text-sm">
+                          <SelectValue placeholder="Select Nationality" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.nationality}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Country of Residence</label>
+                      <Select
+                        value={passenger.countryOfResidence}
+                        onValueChange={(value) => handleInputChange('countryOfResidence', value)}
+                      >
+                        <SelectTrigger className="mt-1 h-9 text-sm">
+                          <SelectValue placeholder="Select Country of Residence" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country.code} value={country.name.toLowerCase()}>
+                              {country.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
               </div>
             </div>
           </AccordionContent>
         </AccordionItem>
 
+        {/* Travel Documents */}
         <AccordionItem value="documents">
           <AccordionTrigger className="text-left">
             <div className="flex items-center space-x-2">
@@ -469,24 +485,26 @@ const PassengerDetails = () => {
             </div>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Document Type</label>
                   <Input
                     value={passenger.documentType || 'passport'}
                     onChange={(e) => handleInputChange('documentType', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 h-9 text-sm"
                     placeholder="e.g., passport"
                     disabled
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Document Number <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Document Number <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     value={passenger.passportNumber || ''}
                     onChange={(e) => handleInputChange('passportNumber', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 h-9 text-sm"
                     placeholder="Enter document number"
                   />
                 </div>
@@ -496,63 +514,75 @@ const PassengerDetails = () => {
                     type="date"
                     value={passenger.passportDateOfIssue || ''}
                     onChange={(e) => handleInputChange('passportDateOfIssue', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Date of Expiry <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Date of Expiry <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     type="date"
                     value={passenger.passportExpiry || ''}
                     onChange={(e) => handleInputChange('passportExpiry', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 h-9 text-sm"
                   />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Place of Issue</label>
-                  <Input
+                  <Select
                     value={passenger.passportPlaceOfIssue || ''}
-                    onChange={(e) => handleInputChange('passportPlaceOfIssue', e.target.value)}
-                    className="mt-1"
-                    placeholder="e.g., Mumbai"
-                  />
+                    onValueChange={(value) => handleInputChange('passportPlaceOfIssue', value)}
+                  >
+                    <SelectTrigger className="mt-1 h-9 text-sm">
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.name}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
+              {/* Document Preview Section */}
               {passenger.hasDocuments && (
                 <div className="border-t pt-4">
-                  <label className="text-sm font-medium text-gray-700">Document Preview</label>
-                  <div className="mt-2 p-4 border-2 border-dashed border-gray-300 rounded-lg">
-                    <div className="flex items-center justify-center space-x-2">
-                      <FileText className="h-8 w-8 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {passenger.documentType || 'passport'}_document.pdf
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Document ID: {passenger.passengerFlightId}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Number: {passenger.passportNumber}
-                        </p>
+                  <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1 mb-3">Document Preview</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-8 w-8 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {passenger.documentType || 'passport'}_document.pdf
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Document ID: {passenger.passengerFlightId} • Number: {passenger.passportNumber}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-2 flex justify-center space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        View
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          View
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
+              {/* Document Upload Section */}
               <div className="border-t pt-4">
-                <label className="text-sm font-medium text-gray-700">Upload Document</label>
-                <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1 mb-3">Upload Document</h4>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                   <input
                     type="file"
                     id="document-upload"
@@ -567,10 +597,10 @@ const PassengerDetails = () => {
                     <Upload className="mr-2 h-4 w-4" />
                     {passenger.hasDocuments ? 'Replace Document' : 'Upload Passport'}
                   </Button>
+                  <p className="text-sm text-gray-500">
+                    Supported formats: PDF, JPG, PNG (Max 5MB)
+                  </p>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
-                  Supported formats: PDF, JPG, PNG (Max 5MB)
-                </p>
               </div>
             </div>
           </AccordionContent>

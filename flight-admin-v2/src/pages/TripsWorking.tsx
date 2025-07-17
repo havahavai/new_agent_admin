@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FlightList } from '@/components/ui/flight-list'
 import { getUserSpecificInfo, FlightData, UserSpecificInfoResponse, ApiError } from '@/api'
+import { getDateCarouselDataForApi, findFirstDateWithFlights } from '@/data/flights'
 
 // Helper function to extract time from ISO string without timezone conversion
 const extractTimeFromISO = (isoString: string): string => {
@@ -69,7 +70,7 @@ const getFlightsForSelectedDate = (flights: FlightData[], selectedDate: Date) =>
 }
 
 // Simple date carousel component
-const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect }: any) => {
+const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect, onLoadNext }: any) => {
   const formatDate = (date: Date) => {
     const today = new Date()
     const tomorrow = new Date(today)
@@ -80,11 +81,9 @@ const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect }: any) => {
     } else if (date.toDateString() === tomorrow.toDateString()) {
       return 'Tomorrow'
     } else {
-      return date.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      })
+      const weekday = date.toLocaleDateString('en-US', { weekday: 'short' })
+      const month = date.toLocaleDateString('en-US', { month: 'long' })
+      return `${weekday}, ${month}`
     }
   }
 
@@ -99,15 +98,15 @@ const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect }: any) => {
         return (
           <button
             key={index}
-            onClick={() => onDateSelect(dateItem.date)}
+            onClick={() => dateItem.hasFlights && onDateSelect(dateItem.date)}
+            disabled={!dateItem.hasFlights && !selected}
             className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[80px] h-24 rounded-lg border-2 transition-all ${
               selected
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : dateItem.hasFlights
-                ? 'border-gray-200 bg-white text-gray-900 hover:border-gray-300'
-                : 'border-gray-100 bg-gray-50 text-gray-400'
+                ? 'border-gray-200 bg-white text-gray-900 hover:border-gray-300 hover:bg-gray-50'
+                : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
             }`}
-            disabled={!dateItem.hasFlights && !selected}
           >
             <div className="text-xs font-medium mb-1">
               {formatDate(dateItem.date)}
@@ -115,14 +114,33 @@ const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect }: any) => {
             <div className="text-lg font-bold mb-1">
               {dateItem.date.getDate()}
             </div>
-            {dateItem.hasFlights && (
+            {dateItem.hasFlights ? (
               <div className="text-xs text-gray-500">
                 {dateItem.flightCount} flight{dateItem.flightCount !== 1 ? 's' : ''}
+              </div>
+            ) : (
+              <div className="text-xs text-gray-400">
+                No flights
               </div>
             )}
           </button>
         )
       })}
+
+      {/* Next button card */}
+      {onLoadNext && (
+        <button
+          onClick={onLoadNext}
+          className="flex-shrink-0 flex flex-col items-center justify-center min-w-[80px] h-24 rounded-lg border-2 transition-all border-blue-200 bg-blue-50 text-blue-600 hover:border-blue-300 hover:bg-blue-100"
+        >
+          <div className="text-xs font-medium mb-1">
+            Next
+          </div>
+          <div className="text-lg font-bold">
+            →
+          </div>
+        </button>
+      )}
     </div>
   )
 }
@@ -131,7 +149,12 @@ const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect }: any) => {
 
 const TripsWorking = () => {
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [dateCarouselData, setDateCarouselData] = useState<any[]>([])
+  const [carouselStartDate] = useState(new Date()) // Track the start date for carousel
+  const [carouselDays, setCarouselDays] = useState(30) // Track how many days to show
+  // Initialize with today + next 30 days immediately
+  const [dateCarouselData, setDateCarouselData] = useState<any[]>(() =>
+    getDateCarouselDataForApi([], { days: 30, startDate: new Date() })
+  )
   const [flights, setFlights] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -149,26 +172,28 @@ const TripsWorking = () => {
           const userResponse = response as UserSpecificInfoResponse
           setApiFlights(userResponse.data.flightsData)
 
-          // Group flights by date and create carousel data
-          const flightsByDate = groupFlightsByDate(userResponse.data.flightsData)
-          setDateCarouselData(flightsByDate)
+          // Create carousel data for today + current days range regardless of flight availability
+          const carouselData = getDateCarouselDataForApi(userResponse.data.flightsData, { days: carouselDays, startDate: carouselStartDate })
+          setDateCarouselData(carouselData)
 
           // Set initial date to first date with flights
-          const firstDateWithFlights = flightsByDate.find(d => d.hasFlights)
-          if (firstDateWithFlights) {
-            setSelectedDate(firstDateWithFlights.date)
-          }
+          const firstDateWithFlights = findFirstDateWithFlights(carouselData)
+          setSelectedDate(firstDateWithFlights)
         } else {
           const errorResponse = response as ApiError
           setError(errorResponse.message)
           setApiFlights([])
-          setDateCarouselData([])
+          // Still show date carousel even if API fails - show today + current days range
+          const carouselData = getDateCarouselDataForApi([], { days: carouselDays, startDate: carouselStartDate })
+          setDateCarouselData(carouselData)
         }
       } catch (err) {
         console.error('Error fetching flights:', err)
         setError('Failed to load flights')
         setApiFlights([])
-        setDateCarouselData([])
+        // Still show date carousel even on error - show today + current days range
+        const carouselData = getDateCarouselDataForApi([], { days: carouselDays, startDate: carouselStartDate })
+        setDateCarouselData(carouselData)
       } finally {
         setLoading(false)
       }
@@ -176,6 +201,22 @@ const TripsWorking = () => {
 
     fetchFlights()
   }, [])
+
+  // Update carousel data when carouselDays changes
+  useEffect(() => {
+    const carouselData = getDateCarouselDataForApi(apiFlights, { days: carouselDays, startDate: carouselStartDate })
+    setDateCarouselData(carouselData)
+
+    // Only update selected date if current selection has no flights and we can find a better option
+    if (carouselData.length > 0) {
+      const currentSelectedData = carouselData.find(item => item.date.toDateString() === selectedDate.toDateString())
+      if (currentSelectedData && !currentSelectedData.hasFlights) {
+        // Current selection has no flights, try to find a better date
+        const firstDateWithFlights = findFirstDateWithFlights(carouselData)
+        setSelectedDate(firstDateWithFlights)
+      }
+    }
+  }, [carouselDays, apiFlights, carouselStartDate, selectedDate])
 
   useEffect(() => {
     if (apiFlights.length > 0) {
@@ -190,6 +231,10 @@ const TripsWorking = () => {
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
+  }
+
+  const handleLoadNext30Days = () => {
+    setCarouselDays(prevDays => prevDays + 30)
   }
 
   if (loading) {
@@ -224,6 +269,7 @@ const TripsWorking = () => {
           dates={dateCarouselData}
           selectedDate={selectedDate}
           onDateSelect={handleDateSelect}
+          onLoadNext={handleLoadNext30Days}
         />
       </div>
 

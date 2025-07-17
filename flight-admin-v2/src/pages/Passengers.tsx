@@ -13,7 +13,6 @@ const Passengers = () => {
   const navigate = useNavigate()
   const [isMobile, setIsMobile] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [documentFilter, setDocumentFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -67,7 +66,7 @@ const Passengers = () => {
       flightNumber: `FL${passenger.passengerFlightId}`, // Use passengerFlightId
       seatNumber: 'N/A', // API doesn't provide seat number
       ticketClass: 'Economy', // Default
-      status: passenger.mainPassenger ? 'Checked In' : 'Pending',
+
       hasDocuments: passenger.passengerDocuments.length > 0,
       phone: 'N/A', // API doesn't provide phone
       nationality: passenger.nationality || passenger.passengerDocuments[0]?.nationality || 'N/A',
@@ -86,17 +85,14 @@ const Passengers = () => {
         passenger.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         passenger.flightNumber.toLowerCase().includes(searchQuery.toLowerCase())
 
-      // Status filter
-      const matchesStatus = statusFilter === 'all' || passenger.status === statusFilter
-
       // Document filter
       const matchesDocument = documentFilter === 'all' ||
         (documentFilter === 'with-documents' && passenger.hasDocuments) ||
         (documentFilter === 'without-documents' && !passenger.hasDocuments)
 
-      return matchesSearch && matchesStatus && matchesDocument
+      return matchesSearch && matchesDocument
     })
-  }, [passengers, searchQuery, statusFilter, documentFilter])
+  }, [passengers, searchQuery, documentFilter])
 
   // Calculate statistics
   const totalPassengers = passengers.length
@@ -199,16 +195,6 @@ const Passengers = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Checked In">Checked In</option>
-                    <option value="Boarded">Boarded</option>
-                  </select>
                   <select
                     value={documentFilter}
                     onChange={(e) => setDocumentFilter(e.target.value)}

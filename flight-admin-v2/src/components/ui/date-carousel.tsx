@@ -10,6 +10,7 @@ interface DateCarouselProps {
   }>
   selectedDate: Date
   onDateSelect: (date: Date) => void
+  onLoadNext?: () => void
   className?: string
 }
 
@@ -17,6 +18,7 @@ export const DateCarousel: React.FC<DateCarouselProps> = ({
   dates,
   selectedDate,
   onDateSelect,
+  onLoadNext,
   className
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -37,17 +39,15 @@ export const DateCarousel: React.FC<DateCarouselProps> = ({
     const today = new Date()
     const tomorrow = new Date(today)
     tomorrow.setDate(today.getDate() + 1)
-    
+
     if (date.toDateString() === today.toDateString()) {
       return 'Today'
     } else if (date.toDateString() === tomorrow.toDateString()) {
       return 'Tomorrow'
     } else {
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      })
+      const weekday = date.toLocaleDateString('en-US', { weekday: 'short' })
+      const month = date.toLocaleDateString('en-US', { month: 'long' })
+      return `${weekday}, ${month}`
     }
   }
 
@@ -105,36 +105,50 @@ export const DateCarousel: React.FC<DateCarouselProps> = ({
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {dates.map((dateItem, index) => {
-          const selected = isSelected(dateItem.date)
           return (
             <button
               key={index}
-              onClick={() => onDateSelect(dateItem.date)}
+              onClick={() => dateItem.hasFlights && onDateSelect(dateItem.date)}
+              disabled={!dateItem.hasFlights && !isSelected(dateItem.date)}
               className={cn(
                 'flex-shrink-0 flex flex-col items-center justify-center',
                 'min-w-[80px] h-20 rounded-lg border-2 transition-all duration-200',
-                'hover:scale-105 active:scale-95',
-                selected
+                isSelected(dateItem.date)
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : dateItem.hasFlights
-                  ? 'border-gray-200 bg-white text-gray-900 hover:border-gray-300 hover:bg-gray-50'
-                  : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed',
-                !dateItem.hasFlights && !selected && 'opacity-60'
+                  ? 'border-gray-200 bg-white text-gray-900 hover:border-gray-300 hover:bg-gray-50 hover:scale-105 active:scale-95'
+                  : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
               )}
-              disabled={!dateItem.hasFlights && !selected}
             >
               <div className="text-xs font-medium mb-1">
                 {formatDate(dateItem.date)}
               </div>
-              <div className={cn(
-                'text-lg font-bold',
-                selected ? 'text-blue-700' : dateItem.hasFlights ? 'text-gray-900' : 'text-gray-400'
-              )}>
+              <div className="text-lg font-bold">
                 {formatDayNumber(dateItem.date)}
               </div>
             </button>
           )
         })}
+
+        {/* Next button card */}
+        {onLoadNext && (
+          <button
+            onClick={onLoadNext}
+            className={cn(
+              'flex-shrink-0 flex flex-col items-center justify-center',
+              'min-w-[80px] h-20 rounded-lg border-2 transition-all duration-200',
+              'hover:scale-105 active:scale-95',
+              'border-blue-200 bg-blue-50 text-blue-600 hover:border-blue-300 hover:bg-blue-100'
+            )}
+          >
+            <div className="text-xs font-medium mb-1">
+              Next
+            </div>
+            <div className="text-lg font-bold">
+              →
+            </div>
+          </button>
+        )}
       </div>
     </div>
   )

@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { DatePicker } from '@/components/ui/date-picker'
+import { PhoneInputField } from '@/components/ui/phone-input'
 import {
   Select,
   SelectContent,
@@ -28,7 +30,8 @@ import {
   User,
   Mail,
   Phone,
-  CreditCard
+  CreditCard,
+  Calendar
 } from 'lucide-react'
 import { getBookingDetails, type BookingDetails, type BookingPassenger, type BoardingPass } from '@/data/flights'
 import { BoardingPass as BoardingPassComponent } from '@/components/ui/boarding-pass'
@@ -103,6 +106,7 @@ const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): B
     passportIssueDate: passenger.documents[0]?.issueDate || '',
     passportExpiry: passenger.documents[0]?.expiry || '',
     passportIssuePlace: passenger.documents[0]?.country || '',
+    countryOfResidence: passenger.country || 'US',
     hasDocuments: passenger.documents.length > 0,
     specialRequests: [],
     boardingPass: passenger.boardingPassUrl ? {
@@ -179,6 +183,7 @@ interface EditableFieldProps {
   onChange: (value: string) => void
   type?: 'text' | 'email' | 'tel' | 'date'
   className?: string
+  isRequired?: boolean
 }
 
 const EditableField: React.FC<EditableFieldProps> = ({
@@ -186,16 +191,39 @@ const EditableField: React.FC<EditableFieldProps> = ({
   value,
   onChange,
   type = 'text',
-  className = ''
+  className = '',
+  isRequired = false
 }) => {
+  const isEmpty = isRequired && (!value || value.trim() === '')
+
+  if (type === 'date') {
+    const dateValue = value ? new Date(value) : undefined
+
+    return (
+      <div className={className}>
+        <DatePicker
+          value={dateValue}
+          onChange={(date) => onChange(date ? date.toISOString() : '')}
+          placeholder="Select date"
+          isRequired={isRequired}
+          label={label}
+          className="mt-1"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className={className}>
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-sm font-medium text-gray-700">
+        {label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
       <Input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1"
+        className={`mt-1 h-9 text-sm ${isEmpty ? 'border-red-500 border-2 focus:border-red-500 focus:ring-red-500' : ''}`}
       />
     </div>
   )
@@ -207,19 +235,26 @@ interface GenderSelectorProps {
   value: string
   onChange: (value: string) => void
   className?: string
+  isRequired?: boolean
 }
 
 const GenderSelector: React.FC<GenderSelectorProps> = ({
   label,
   value,
   onChange,
-  className = ''
+  className = '',
+  isRequired = false
 }) => {
+  const isEmpty = isRequired && (!value || value.trim() === '')
+
   return (
     <div className={className}>
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-sm font-medium text-gray-700">
+        {label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="mt-1">
+        <SelectTrigger className={`mt-1 h-9 text-sm ${isEmpty ? 'border-red-500 border-2 focus:border-red-500 focus:ring-red-500' : ''}`}>
           <SelectValue placeholder="Select Gender" />
         </SelectTrigger>
         <SelectContent>
@@ -260,19 +295,26 @@ interface NationalitySelectorProps {
   value: string
   onChange: (value: string) => void
   className?: string
+  isRequired?: boolean
 }
 
 const NationalitySelector: React.FC<NationalitySelectorProps> = ({
   label,
   value,
   onChange,
-  className = ''
+  className = '',
+  isRequired = false
 }) => {
+  const isEmpty = isRequired && (!value || value.trim() === '')
+
   return (
     <div className={className}>
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-sm font-medium text-gray-700">
+        {label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="mt-1">
+        <SelectTrigger className={`mt-1 h-9 text-sm ${isEmpty ? 'border-red-500 border-2 focus:border-red-500 focus:ring-red-500' : ''}`}>
           <SelectValue placeholder="Select Country" />
         </SelectTrigger>
         <SelectContent>
@@ -287,48 +329,7 @@ const NationalitySelector: React.FC<NationalitySelectorProps> = ({
   )
 }
 
-// Editable field with copy/apply functionality
-interface EditableFieldWithCopyProps {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  onCopyToAll: (value: string) => void
-  type?: 'text' | 'email' | 'tel'
-  className?: string
-}
 
-const EditableFieldWithCopy: React.FC<EditableFieldWithCopyProps> = ({
-  label,
-  value,
-  onChange,
-  onCopyToAll,
-  type = 'text',
-  className = ''
-}) => {
-  return (
-    <div className={className}>
-      <label className="text-sm font-medium text-gray-700">{label}</label>
-      <div className="mt-1 flex space-x-2">
-        <Input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onCopyToAll(value)}
-          disabled={!value}
-          className="px-2 text-xs"
-        >
-          Apply to All
-        </Button>
-      </div>
-    </div>
-  )
-}
 
 // Country selector component for issue place
 interface CountrySelectorProps {
@@ -336,19 +337,26 @@ interface CountrySelectorProps {
   value: string
   onChange: (value: string) => void
   className?: string
+  isRequired?: boolean
 }
 
 const CountrySelector: React.FC<CountrySelectorProps> = ({
   label,
   value,
   onChange,
-  className = ''
+  className = '',
+  isRequired = false
 }) => {
+  const isEmpty = isRequired && (!value || value.trim() === '')
+
   return (
     <div className={className}>
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-sm font-medium text-gray-700">
+        {label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="mt-1">
+        <SelectTrigger className={`mt-1 h-9 text-sm ${isEmpty ? 'border-red-500 border-2 focus:border-red-500 focus:ring-red-500' : ''}`}>
           <SelectValue placeholder="Select Country" />
         </SelectTrigger>
         <SelectContent>
@@ -371,6 +379,28 @@ const TripDetails = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [apiData, setApiData] = useState<FlightDataByIdsResponse['data'] | null>(null)
+
+
+  // Track changes for individual sections
+  const [sectionChanges, setSectionChanges] = useState<{
+    booking: boolean
+    flight: boolean
+    passengers: { [key: number]: boolean }
+  }>({
+    booking: false,
+    flight: false,
+    passengers: {}
+  })
+
+  const [sectionSaving, setSectionSaving] = useState<{
+    booking: boolean
+    flight: boolean
+    passengers: { [key: number]: boolean }
+  }>({
+    booking: false,
+    flight: false,
+    passengers: {}
+  })
 
   useEffect(() => {
     const fetchFlightDetails = async () => {
@@ -427,6 +457,7 @@ const TripDetails = () => {
 
     if (section === 'booking') {
       (updatedBooking as any)[field] = value
+      setSectionChanges(prev => ({ ...prev, booking: true }))
     } else if (section === 'flight') {
       if (field.includes('.')) {
         const [parent, child] = field.split('.')
@@ -434,6 +465,7 @@ const TripDetails = () => {
       } else {
         (updatedBooking.flight as any)[field] = value
       }
+      setSectionChanges(prev => ({ ...prev, flight: true }))
     } else if (section === 'passenger' && passengerIndex !== undefined) {
       if (field.includes('.')) {
         const [parent, child] = field.split('.')
@@ -441,38 +473,69 @@ const TripDetails = () => {
       } else {
         (updatedBooking.passengers[passengerIndex] as any)[field] = value
       }
+      setSectionChanges(prev => ({
+        ...prev,
+        passengers: { ...prev.passengers, [passengerIndex]: true }
+      }))
     }
 
     setBookingDetails(updatedBooking)
-    // Here you would typically save to backend
     console.log('Field updated:', section, field, value)
   }
 
-  const handleCopyEmailToAll = (email: string) => {
-    if (!bookingDetails || !email) return
 
-    const updatedBooking = { ...bookingDetails }
-    updatedBooking.passengers = updatedBooking.passengers.map(passenger => ({
-      ...passenger,
-      email: email
-    }))
 
-    setBookingDetails(updatedBooking)
-    console.log('Email copied to all passengers:', email)
+  const handleSectionSave = async (section: 'booking' | 'flight' | 'passenger', passengerIndex?: number) => {
+    if (!bookingDetails) return
+
+    const sectionKey = section === 'passenger' && passengerIndex !== undefined ? `passengers.${passengerIndex}` : section
+
+    if (section === 'passenger' && passengerIndex !== undefined) {
+      setSectionSaving(prev => ({
+        ...prev,
+        passengers: { ...prev.passengers, [passengerIndex]: true }
+      }))
+    } else {
+      setSectionSaving(prev => ({ ...prev, [section]: true }))
+    }
+
+    try {
+      // Simulate API call - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 800))
+
+      // Here you would typically save specific section to backend
+      console.log(`Saving ${section} section:`, section === 'passenger' && passengerIndex !== undefined
+        ? bookingDetails.passengers[passengerIndex]
+        : section === 'booking'
+          ? { pnr: bookingDetails.pnr, bookingReference: bookingDetails.bookingReference, contactEmail: bookingDetails.contactEmail, contactPhone: bookingDetails.contactPhone }
+          : bookingDetails.flight)
+
+      // Clear section-specific changes
+      if (section === 'passenger' && passengerIndex !== undefined) {
+        setSectionChanges(prev => ({
+          ...prev,
+          passengers: { ...prev.passengers, [passengerIndex]: false }
+        }))
+      } else {
+        setSectionChanges(prev => ({ ...prev, [section]: false }))
+      }
+
+    } catch (error) {
+      console.error(`Error saving ${section} section:`, error)
+      setError(`Failed to save ${section} changes. Please try again.`)
+    } finally {
+      if (section === 'passenger' && passengerIndex !== undefined) {
+        setSectionSaving(prev => ({
+          ...prev,
+          passengers: { ...prev.passengers, [passengerIndex]: false }
+        }))
+      } else {
+        setSectionSaving(prev => ({ ...prev, [section]: false }))
+      }
+    }
   }
 
-  const handleCopyPhoneToAll = (phone: string) => {
-    if (!bookingDetails || !phone) return
 
-    const updatedBooking = { ...bookingDetails }
-    updatedBooking.passengers = updatedBooking.passengers.map(passenger => ({
-      ...passenger,
-      phone: phone
-    }))
-
-    setBookingDetails(updatedBooking)
-    console.log('Phone copied to all passengers:', phone)
-  }
 
   const handleDownloadActualBoardingPass = (boardingPassUrl: string, passengerName: string, flightNumber: string) => {
     // Download the actual boarding pass from the URL
@@ -1026,8 +1089,8 @@ const TripDetails = () => {
 
       {/* Header */}
       <div className="mb-6">
-        {/* Back button row */}
-        <div className="mb-4">
+        {/* Back button and save button row */}
+        <div className="mb-4 flex items-center justify-between">
           <Button
             variant="outline"
             size="sm"
@@ -1037,6 +1100,8 @@ const TripDetails = () => {
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Back to Trips</span>
           </Button>
+
+
         </div>
 
         {/* Header content row */}
@@ -1075,38 +1140,55 @@ const TripDetails = () => {
             <div className="flex items-center space-x-2">
               <FileText className="h-5 w-5" />
               <span>Booking Information</span>
+              {sectionChanges.booking && (
+                <div className="w-2 h-2 bg-orange-500 rounded-full ml-2"></div>
+              )}
             </div>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-              <div className="space-y-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
                 <EditableField
                   label="PNR Code"
                   value={pnr}
                   onChange={(value) => handleFieldChange('booking', 'pnr', value)}
+                  isRequired={true}
+                  className="text-sm"
                 />
                 <EditableField
                   label="Booking Reference"
                   value={bookingReference}
                   onChange={(value) => handleFieldChange('booking', 'bookingReference', value)}
+                  isRequired={true}
+                  className="text-sm"
                 />
-
-              </div>
-              <div className="space-y-4">
                 <EditableField
                   label="Contact Email"
                   value={contactEmail}
                   onChange={(value) => handleFieldChange('booking', 'contactEmail', value)}
                   type="email"
+                  isRequired={true}
+                  className="text-sm"
                 />
-                <EditableField
+                <PhoneInputField
                   label="Contact Phone"
                   value={contactPhone}
-                  onChange={(value) => handleFieldChange('booking', 'contactPhone', value)}
-                  type="tel"
+                  onChange={(value) => handleFieldChange('booking', 'contactPhone', value || '')}
+                  isRequired={true}
+                  className="text-sm"
                 />
-
               </div>
+              {sectionChanges.booking && (
+                <div className="flex justify-end pt-4 border-t border-gray-200">
+                  <Button
+                    onClick={() => handleSectionSave('booking')}
+                    disabled={sectionSaving.booking}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {sectionSaving.booking ? 'Saving...' : 'Save Booking Info'}
+                  </Button>
+                </div>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -1119,72 +1201,51 @@ const TripDetails = () => {
             </div>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-              <div className="space-y-4">
-                <EditableField
-                  label="Flight Number"
-                  value={flight.flightNumber}
-                  onChange={(value) => handleFieldChange('flight', 'flightNumber', value)}
-                />
-                <EditableField
-                  label="From City"
-                  value={flight.route.from}
-                  onChange={(value) => handleFieldChange('flight', 'route.from', value)}
-                />
-                <EditableField
-                  label="From Code"
-                  value={flight.route.fromCode}
-                  onChange={(value) => handleFieldChange('flight', 'route.fromCode', value)}
-                />
-                <EditableField
-                  label="To City"
-                  value={flight.route.to}
-                  onChange={(value) => handleFieldChange('flight', 'route.to', value)}
-                />
-                <EditableField
-                  label="To Code"
-                  value={flight.route.toCode}
-                  onChange={(value) => handleFieldChange('flight', 'route.toCode', value)}
-                />
-              </div>
-              <div className="space-y-4">
-                <EditableField
-                  label="Aircraft"
-                  value={flight.aircraft}
-                  onChange={(value) => handleFieldChange('flight', 'aircraft', value)}
-                />
-                <ReadOnlyField
-                  label="Departure Time"
-                  value={flight.departure}
-                />
-                <ReadOnlyField
-                  label="Arrival Time"
-                  value={flight.arrival}
-                />
-                <EditableField
-                  label="Gate"
-                  value={flight.gate || 'TBD'}
-                  onChange={(value) => handleFieldChange('flight', 'gate', value)}
-                />
-                {/* Display delay information from API if available */}
-                {apiData?.delay && (
-                  <ReadOnlyField
-                    label="Delay Status"
-                    value={apiData.delay}
-                  />
-                )}
-              </div>
-              <div className="md:col-span-2 flex flex-wrap gap-2">
-                {flight.status && flight.status !== 'Departed' && (
-                  <Badge className={getFlightStatusColor(flight.status)}>
-                    {flight.status}
-                    {/* Show API delay string if available, otherwise show minutes */}
-                    {apiData?.delay ? ` (${apiData.delay})` : flight.delay ? ` (+${flight.delay}min)` : ''}
-                  </Badge>
-                )}
-                <Badge variant="outline">
-                  {flight.flightType}
-                </Badge>
+            <div className="pt-4">
+              {/* Compact Flight Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                {/* Route and Schedule in one compact layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Route Information */}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-center flex-1">
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">From</div>
+                        <div className="font-semibold text-gray-900">{flight.route.from}</div>
+                        <div className="text-xs text-gray-500">{flight.route.fromCode}</div>
+                      </div>
+                      <div className="flex items-center px-4">
+                        <div className="flex items-center space-x-1 text-gray-400">
+                          <div className="w-6 h-px bg-gray-300"></div>
+                          <Plane className="h-3 w-3" />
+                          <div className="w-6 h-px bg-gray-300"></div>
+                        </div>
+                      </div>
+                      <div className="text-center flex-1">
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">To</div>
+                        <div className="font-semibold text-gray-900">{flight.route.to}</div>
+                        <div className="text-xs text-gray-500">{flight.route.toCode}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Flight Schedule */}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-center flex-1">
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Departure</div>
+                        <div className="font-semibold text-gray-900">{flight.departure}</div>
+                      </div>
+                      <div className="flex items-center px-4">
+                        <Clock className="h-3 w-3 text-gray-400" />
+                      </div>
+                      <div className="text-center flex-1">
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Arrival</div>
+                        <div className="font-semibold text-gray-900">{flight.arrival}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </AccordionContent>
@@ -1213,6 +1274,9 @@ const TripDetails = () => {
                             {passenger.isMainPassenger && (
                               <Badge variant="secondary" className="text-xs">Main Passenger</Badge>
                             )}
+                            {sectionChanges.passengers[index] && (
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            )}
                           </div>
                           <p className="text-sm text-gray-600">
                             {passenger.seatNumber ? `Seat ${passenger.seatNumber}` : 'Seat not assigned'} • {passenger.ticketClass}
@@ -1234,84 +1298,70 @@ const TripDetails = () => {
                     </div>
 
                     {/* Personal Information */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Personal Information</h4>
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <EditableField
-                              label="First Name"
-                              value={passenger.name.split(' ')[0] || ''}
-                              onChange={(value) => {
-                                const lastName = passenger.name.split(' ').slice(1).join(' ') || ''
-                                const fullName = lastName ? `${value} ${lastName}` : value
-                                handleFieldChange('passenger', 'name', fullName, index)
-                              }}
-                              className="text-sm"
-                            />
-                            <EditableField
-                              label="Last Name"
-                              value={passenger.name.split(' ').slice(1).join(' ') || ''}
-                              onChange={(value) => {
-                                const firstName = passenger.name.split(' ')[0] || ''
-                                const fullName = firstName ? `${firstName} ${value}` : value
-                                handleFieldChange('passenger', 'name', fullName, index)
-                              }}
-                              className="text-sm"
-                            />
-                          </div>
-                          <EditableField
-                            label="Date of Birth"
-                            value={new Date(passenger.dateOfBirth).toISOString().split('T')[0]}
-                            onChange={(value) => handleFieldChange('passenger', 'dateOfBirth', new Date(value).toISOString(), index)}
-                            type="date"
-                            className="text-sm"
-                          />
-                          <GenderSelector
-                            label="Gender"
-                            value={passenger.gender}
-                            onChange={(value) => handleFieldChange('passenger', 'gender', value, index)}
-                            className="text-sm"
-                          />
-                          <NationalitySelector
-                            label="Country"
-                            value={passenger.nationality}
-                            onChange={(value) => handleFieldChange('passenger', 'nationality', value, index)}
-                            className="text-sm"
-                          />
-                          <EditableFieldWithCopy
-                            label="Email"
-                            value={passenger.email || ''}
-                            onChange={(value) => handleFieldChange('passenger', 'email', value, index)}
-                            onCopyToAll={handleCopyEmailToAll}
-                            type="email"
-                            className="text-sm"
-                          />
-                          <EditableFieldWithCopy
-                            label="Phone"
-                            value={passenger.phone || ''}
-                            onChange={(value) => handleFieldChange('passenger', 'phone', value, index)}
-                            onCopyToAll={handleCopyPhoneToAll}
-                            type="tel"
-                            className="text-sm"
-                          />
-                          <EditableField
-                            label="Seat Number"
-                            value={passenger.seatNumber || ''}
-                            onChange={(value) => handleFieldChange('passenger', 'seatNumber', value, index)}
-                            className="text-sm"
-                          />
-                        </div>
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Personal Information</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        <EditableField
+                          label="First Name"
+                          value={passenger.name.split(' ')[0] || ''}
+                          onChange={(value) => {
+                            const lastName = passenger.name.split(' ').slice(1).join(' ') || ''
+                            const fullName = lastName ? `${value} ${lastName}` : value
+                            handleFieldChange('passenger', 'name', fullName, index)
+                          }}
+                          className="text-sm"
+                          isRequired={true}
+                        />
+                        <EditableField
+                          label="Last Name"
+                          value={passenger.name.split(' ').slice(1).join(' ') || ''}
+                          onChange={(value) => {
+                            const firstName = passenger.name.split(' ')[0] || ''
+                            const fullName = firstName ? `${firstName} ${value}` : value
+                            handleFieldChange('passenger', 'name', fullName, index)
+                          }}
+                          className="text-sm"
+                          isRequired={true}
+                        />
+                        <EditableField
+                          label="Date of Birth"
+                          value={new Date(passenger.dateOfBirth).toISOString().split('T')[0]}
+                          onChange={(value) => handleFieldChange('passenger', 'dateOfBirth', new Date(value).toISOString(), index)}
+                          type="date"
+                          className="text-sm"
+                          isRequired={true}
+                        />
+                        <GenderSelector
+                          label="Gender"
+                          value={passenger.gender}
+                          onChange={(value) => handleFieldChange('passenger', 'gender', value, index)}
+                          className="text-sm"
+                          isRequired={true}
+                        />
+                        <NationalitySelector
+                          label="Country"
+                          value={passenger.nationality}
+                          onChange={(value) => handleFieldChange('passenger', 'nationality', value, index)}
+                          className="text-sm"
+                          isRequired={true}
+                        />
+                        <EditableField
+                          label="Seat Number"
+                          value={passenger.seatNumber || ''}
+                          onChange={(value) => handleFieldChange('passenger', 'seatNumber', value, index)}
+                          className="text-sm"
+                        />
                       </div>
 
                       <div className="space-y-3">
                         <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Passport Details</h4>
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                           <EditableField
                             label="Passport Number"
                             value={passenger.passportNumber}
                             onChange={(value) => handleFieldChange('passenger', 'passportNumber', value, index)}
                             className="text-sm"
+                            isRequired={true}
                           />
                           <EditableField
                             label="Issue Date"
@@ -1319,6 +1369,7 @@ const TripDetails = () => {
                             onChange={(value) => handleFieldChange('passenger', 'passportIssueDate', value ? new Date(value).toISOString() : '', index)}
                             type="date"
                             className="text-sm"
+                            isRequired={true}
                           />
                           <EditableField
                             label="Expiry Date"
@@ -1326,18 +1377,27 @@ const TripDetails = () => {
                             onChange={(value) => handleFieldChange('passenger', 'passportExpiry', value ? new Date(value).toISOString() : '', index)}
                             type="date"
                             className="text-sm"
+                            isRequired={true}
                           />
                           <CountrySelector
-                            label="Issue Place"
+                            label="Issue Country"
                             value={passenger.passportIssuePlace}
                             onChange={(value) => handleFieldChange('passenger', 'passportIssuePlace', value, index)}
                             className="text-sm"
+                            isRequired={true}
+                          />
+                          <CountrySelector
+                            label="Country of Residence"
+                            value={passenger.countryOfResidence}
+                            onChange={(value) => handleFieldChange('passenger', 'countryOfResidence', value, index)}
+                            className="text-sm"
+                            isRequired={true}
                           />
                         </div>
                         {!passenger.hasDocuments && (
-                          <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 p-3 rounded-lg">
-                            <FileText className="h-5 w-5" />
-                            <span className="text-sm font-medium">Passport documents required</span>
+                          <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 p-2 rounded-lg mt-3">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-xs font-medium">Passport documents required</span>
                           </div>
                         )}
                       </div>
@@ -1354,6 +1414,19 @@ const TripDetails = () => {
                             </Badge>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Save Button */}
+                    {sectionChanges.passengers[index] && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                        <Button
+                          onClick={() => handleSectionSave('passenger', index)}
+                          disabled={sectionSaving.passengers[index]}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          {sectionSaving.passengers[index] ? 'Saving...' : 'Save Passenger Info'}
+                        </Button>
                       </div>
                     )}
                   </CardContent>
