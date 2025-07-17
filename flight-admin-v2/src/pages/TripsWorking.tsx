@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react'
 import { FlightList } from '@/components/ui/flight-list'
 import { getUserSpecificInfo, FlightData, UserSpecificInfoResponse, ApiError } from '@/api'
 
+// Helper function to extract time from ISO string without timezone conversion
+const extractTimeFromISO = (isoString: string): string => {
+  // Extract time part from ISO string (e.g., "2025-05-16T10:00:00.000Z" -> "10:00")
+  const timePart = isoString.split('T')[1]?.split('.')[0] || isoString.split('T')[1]?.split('Z')[0]
+  if (timePart) {
+    const [hours, minutes] = timePart.split(':')
+    return `${hours}:${minutes}`
+  }
+  return isoString // fallback to original if parsing fails
+}
+
 // Helper function to group flights by departure date
 const groupFlightsByDate = (flights: FlightData[]) => {
   const grouped: { [key: string]: FlightData[] } = {}
@@ -44,20 +55,14 @@ const getFlightsForSelectedDate = (flights: FlightData[], selectedDate: Date) =>
       fromCode: flight.departureAirport,
       toCode: flight.arrivalAirport
     },
-    departure: new Date(flight.departureTime).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }),
-    arrival: new Date(flight.arrivalTime).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }),
+    departure: extractTimeFromISO(flight.departureTime),
+    arrival: extractTimeFromISO(flight.arrivalTime),
     checkInStatus: flight.checkInStatus,
     passengers: parseInt(flight.numberOfPassengers),
     aircraft: flight.airline, // Use airline as aircraft for now
     webCheckinStatus: flight.checkInStatus === 'NONE' ? 'Scheduled' :
                      flight.checkInStatus === 'FAILED' ? 'Failed' : 'Completed' as any,
-    flightType: 'International' as any, // Default to International, could be enhanced
+    flightType: flight.isInternational ? 'International' : 'Domestic' as any,
     ticketId: flight.ticketId,
     status: flight.checkInStatus === 'FAILED' ? 'Delayed' : 'On Time' as any
   }))

@@ -7,7 +7,7 @@ export interface BookingPassenger {
   email?: string;
   phone?: string;
   seatNumber?: string;
-  ticketClass: "Economy" | "Business" | "First Class";
+  ticketClass: string;
   status: "Checked In" | "Boarded" | "Pending";
   hasDocuments: boolean;
   nationality: string;
@@ -44,6 +44,7 @@ export interface BoardingPass {
   barcode: string;
   qrCode: string;
   issuedAt: string;
+  boardingPassUrl?: string; // URL to the actual boarding pass from API
 }
 
 export interface BookingDetails {

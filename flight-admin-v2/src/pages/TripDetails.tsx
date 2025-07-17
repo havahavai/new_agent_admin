@@ -35,6 +35,56 @@ import { BoardingPass as BoardingPassComponent } from '@/components/ui/boarding-
 import { countries } from '@/data/countries'
 import { getFlightDataByIds, FlightDataByIdsResponse, ApiError } from '@/api'
 
+// Helper function to extract time from ISO string without timezone conversion
+const extractTimeFromISO = (isoString: string): string => {
+  // Extract time part from ISO string (e.g., "2025-05-16T10:00:00.000Z" -> "10:00")
+  const timePart = isoString.split('T')[1]?.split('.')[0] || isoString.split('T')[1]?.split('Z')[0]
+  if (timePart) {
+    const [hours, minutes] = timePart.split(':')
+    return `${hours}:${minutes}`
+  }
+  return isoString // fallback to original if parsing fails
+}
+
+// Helper function to parse delay string and extract minutes
+const parseDelayString = (delayString: string): number | undefined => {
+  if (!delayString) return undefined
+
+  // Extract number from strings like "35m delay", "2h delay", "45 min delay", etc.
+  const match = delayString.match(/(\d+)\s*(m|min|h|hour)/i)
+  if (match) {
+    const value = parseInt(match[1])
+    const unit = match[2].toLowerCase()
+
+    // Convert to minutes
+    if (unit.startsWith('h')) {
+      return value * 60
+    } else {
+      return value
+    }
+  }
+
+  return undefined
+}
+
+// Helper function to determine flight status based on delay and check-in status
+const determineFlightStatus = (delayString: string, checkInStatus: string): 'On Time' | 'Delayed' | 'Boarding' | 'Departed' => {
+  if (delayString && delayString.toLowerCase().includes('delay')) {
+    return 'Delayed'
+  }
+
+  switch (checkInStatus) {
+    case 'FAILED':
+      return 'Delayed'
+    case 'COMPLETED':
+      return 'On Time'
+    case 'BOARDING':
+      return 'Boarding'
+    default:
+      return 'On Time'
+  }
+}
+
 // Helper function to convert API response to BookingDetails format
 const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): BookingDetails => {
   const passengers: BookingPassenger[] = apiData.passengers.map((passenger, index) => ({
@@ -43,16 +93,16 @@ const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): B
     email: passenger.email,
     phone: passenger.mobileNumber,
     seatNumber: passenger.seatNumber || '',
-    ticketClass: 'Economy', // Default since not provided in API
+    ticketClass: apiData.flightClass, // Default since not provided in API
     status: apiData.checkInStatus === 'FAILED' ? 'Pending' : 'Checked In' as BookingPassenger['status'],
     isMainPassenger: index === 0,
     dateOfBirth: passenger.dateOfBirth || new Date().toISOString(),
     gender: (passenger.gender === 'Female' ? 'Female' : 'Male') as 'Male' | 'Female',
     nationality: passenger.country || 'US',
     passportNumber: passenger.documents[0]?.number || '',
-    passportIssueDate: passenger.documents[0]?.issueDate || new Date().toISOString(),
-    passportExpiry: passenger.documents[0]?.expiry || new Date().toISOString(),
-    passportIssuePlace: passenger.documents[0]?.country || 'US',
+    passportIssueDate: passenger.documents[0]?.issueDate || '',
+    passportExpiry: passenger.documents[0]?.expiry || '',
+    passportIssuePlace: passenger.documents[0]?.country || '',
     hasDocuments: passenger.documents.length > 0,
     specialRequests: [],
     boardingPass: passenger.boardingPassUrl ? {
@@ -62,14 +112,8 @@ const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): B
       passengerName: `${passenger.firstName} ${passenger.lastName}`,
       flightNumber: apiData.flightNumber,
       date: new Date(apiData.departure.time).toLocaleDateString(),
-      departure: new Date(apiData.departure.time).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      arrival: new Date(apiData.arrival.time).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+      departure: extractTimeFromISO(apiData.departure.time),
+      arrival: extractTimeFromISO(apiData.arrival.time),
       route: {
         from: apiData.departure.city,
         to: apiData.arrival.city,
@@ -79,16 +123,21 @@ const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): B
       seatNumber: passenger.seatNumber || 'TBD',
       gate: apiData.boardingGate || 'TBD',
       boardingGroup: 'A',
-      ticketClass: 'Economy',
+      ticketClass: apiData.flightClass,
       barcode: `${apiData.flightNumber}${passenger.firstName}${passenger.lastName}`.replace(/\s/g, '').toUpperCase(),
       qrCode: `QR${apiData.flightNumber}${passenger.firstName}${passenger.lastName}`.replace(/\s/g, '').toUpperCase(),
-      issuedAt: new Date().toISOString()
+      issuedAt: new Date().toISOString(),
+      boardingPassUrl: passenger.boardingPassUrl
     } : undefined
   }))
 
+  // Parse delay from API response
+  const delayMinutes = parseDelayString(apiData.delay)
+  const flightStatus = determineFlightStatus(apiData.delay, apiData.checkInStatus)
+
   return {
     pnr: apiData.pnr,
-    bookingReference: apiData.bookingReference || apiData.pnr,
+    bookingReference: apiData.bookingReference || '',
     flight: {
       id: apiData.flightNumber,
       flightNumber: apiData.flightNumber,
@@ -98,15 +147,15 @@ const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): B
         fromCode: apiData.departure.airportIata,
         toCode: apiData.arrival.airportIata
       },
-      departure: new Date(apiData.departure.time).toLocaleString(),
-      arrival: new Date(apiData.arrival.time).toLocaleString(),
+      departure: extractTimeFromISO(apiData.departure.time),
+      arrival: extractTimeFromISO(apiData.arrival.time),
       checkInStatus: apiData.checkInStatus,
       aircraft: apiData.aircraftType,
       gate: apiData.boardingGate || 'TBD',
-      status: apiData.checkInStatus === 'FAILED' ? 'Delayed' : 'On Time',
+      status: flightStatus,
       flightType: apiData.isInternational ? 'International' : 'Domestic',
       webCheckinStatus: apiData.checkInStatus === 'FAILED' ? 'Failed' : 'Completed',
-      delay: apiData.checkInStatus === 'FAILED' ? 30 : undefined,
+      delay: delayMinutes,
       passengers: passengers.length
     },
     passengers,
@@ -423,6 +472,17 @@ const TripDetails = () => {
 
     setBookingDetails(updatedBooking)
     console.log('Phone copied to all passengers:', phone)
+  }
+
+  const handleDownloadActualBoardingPass = (boardingPassUrl: string, passengerName: string, flightNumber: string) => {
+    // Download the actual boarding pass from the URL
+    const link = document.createElement('a')
+    link.href = boardingPassUrl
+    link.download = `boarding-pass-${flightNumber}-${passengerName.replace(/\s+/g, '-')}`
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const handleDownloadBoardingPass = (boardingPass: BoardingPass) => {
@@ -1106,12 +1166,20 @@ const TripDetails = () => {
                   value={flight.gate || 'TBD'}
                   onChange={(value) => handleFieldChange('flight', 'gate', value)}
                 />
+                {/* Display delay information from API if available */}
+                {apiData?.delay && (
+                  <ReadOnlyField
+                    label="Delay Status"
+                    value={apiData.delay}
+                  />
+                )}
               </div>
               <div className="md:col-span-2 flex flex-wrap gap-2">
                 {flight.status && flight.status !== 'Departed' && (
                   <Badge className={getFlightStatusColor(flight.status)}>
                     {flight.status}
-                    {flight.delay && ` (+${flight.delay}min)`}
+                    {/* Show API delay string if available, otherwise show minutes */}
+                    {apiData?.delay ? ` (${apiData.delay})` : flight.delay ? ` (+${flight.delay}min)` : ''}
                   </Badge>
                 )}
                 <Badge variant="outline">
@@ -1247,15 +1315,15 @@ const TripDetails = () => {
                           />
                           <EditableField
                             label="Issue Date"
-                            value={new Date(passenger.passportIssueDate).toISOString().split('T')[0]}
-                            onChange={(value) => handleFieldChange('passenger', 'passportIssueDate', new Date(value).toISOString(), index)}
+                            value={passenger.passportIssueDate ? new Date(passenger.passportIssueDate).toISOString().split('T')[0] : ''}
+                            onChange={(value) => handleFieldChange('passenger', 'passportIssueDate', value ? new Date(value).toISOString() : '', index)}
                             type="date"
                             className="text-sm"
                           />
                           <EditableField
                             label="Expiry Date"
-                            value={new Date(passenger.passportExpiry).toISOString().split('T')[0]}
-                            onChange={(value) => handleFieldChange('passenger', 'passportExpiry', new Date(value).toISOString(), index)}
+                            value={passenger.passportExpiry ? new Date(passenger.passportExpiry).toISOString().split('T')[0] : ''}
+                            onChange={(value) => handleFieldChange('passenger', 'passportExpiry', value ? new Date(value).toISOString() : '', index)}
                             type="date"
                             className="text-sm"
                           />

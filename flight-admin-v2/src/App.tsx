@@ -10,6 +10,7 @@ import SimpleSeatSelection from './pages/SimpleSeatSelection'
 import SimplifiedSeatSelection from './pages/SimplifiedSeatSelection'
 import TestPage from './pages/TestPage'
 import ApiTest from './pages/ApiTest'
+import Login from './pages/Login'
 
 function App() {
   return (
@@ -17,6 +18,8 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<TripsWorking />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/oauth2callback" element={<Login />} />
           <Route path="/trips" element={<TripsWorking />} />
           <Route path="/trips/:flightId" element={<TripDetails />} />
           <Route path="/trips/:flightId/:ticketId" element={<TripDetails />} />

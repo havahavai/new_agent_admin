@@ -14,6 +14,7 @@ export interface FlightData {
   ticketSource: string;
   belongsTo: string;
   numberOfPassengers: string;
+  isInternational: boolean;
 }
 
 export interface UserSpecificInfoResponse {
@@ -68,6 +69,7 @@ export interface FlightDataByIdsResponse {
     checkInStatus: string;
     isInternational: boolean;
     aircraftType: string;
+    delay: string;
     boardingGate: string;
     Terminal: string;
     departure: FlightDeparture;
