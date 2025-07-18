@@ -31,12 +31,11 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { countries } from '@/data/countries'
 import {
-  PassengerDetailsResponse,
   PassengerDetail,
   ApiError,
   uploadUserDocument,
@@ -45,17 +44,16 @@ import {
   addPassport,
   updatePassport
 } from '@/api'
-import { getUsersPassengerDetails } from '@/api/passengerDetails'
+import { getPassengerDetailById } from '@/api/passengerDetails'
 import SimpleSeatWidget from '@/components/SimpleSeatWidget'
 
 const PassengerDetails = () => {
   // Updated component with document preview fixes
   const navigate = useNavigate()
-  const location = useLocation()
   const { id: passengerId } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [apiPassengers, setApiPassengers] = useState<PassengerDetail[]>([])
+  const [currentPassengerData, setCurrentPassengerData] = useState<PassengerDetail | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
   const [showInvalidDocumentDialog, setShowInvalidDocumentDialog] = useState(false)
@@ -68,8 +66,7 @@ const PassengerDetails = () => {
   // Form validation states
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  // Get passenger data from navigation state if available
-  const navigationPassengerData = location.state?.passengerData as PassengerDetail | undefined
+  // Remove navigation state dependency - always fetch from API
 
   // Passenger data from API
   const [passenger, setPassenger] = useState({
@@ -101,178 +98,54 @@ const PassengerDetails = () => {
         setLoading(true)
         setError(null)
 
-        // If we have passenger data from navigation, use it directly
-        if (navigationPassengerData && passengerId) {
-          const document = navigationPassengerData.passengerDocuments[0]
-          setPassenger({
-            id: `P${navigationPassengerData.passengerId}`,
-            name: `${navigationPassengerData.firstName} ${navigationPassengerData.lastName}`,
-            firstName: navigationPassengerData.firstName,
-            lastName: navigationPassengerData.lastName,
-            email: navigationPassengerData.email || '',
-            phone: navigationPassengerData.mobileNumber || '',
-            hasDocuments: navigationPassengerData.passengerDocuments.length > 0,
-            gender: navigationPassengerData.gender || document?.gender || '',
-            dateOfBirth: navigationPassengerData.dateOfBirth || document?.dateOfBirth || '',
-            nationality: normalizeNationality(navigationPassengerData.nationality || document?.nationality || ''),
-            passportNumber: document?.documentNumber || '',
-            passportDateOfIssue: document?.dateOfIssue || '',
-            passportExpiry: document?.dateOfExpiry || '',
-            passportPlaceOfIssue: document?.placeOfIssue || '',
-            countryOfResidence: normalizeCountryOfResidence(navigationPassengerData.countryOfResidence || document?.countryOfResidence || ''),
-            numberOfFlights: navigationPassengerData.numberOfFlights,
-            mainPassenger: navigationPassengerData.mainPassenger,
-            passengerFlightId: navigationPassengerData.passengerFlightId,
-            documentType: document?.documentType || '',
-            documentUrl: document?.documentUrl || ''
-          })
-          setLoading(false)
-          return
-        }
+        // If passengerId is provided, use the specific API to get passenger by ID
+        if (passengerId) {
+          const passengerIdNumber = passengerId.replace('P', '')
+          const response = await getPassengerDetailById(passengerIdNumber)
 
-        // Fallback to API call if no navigation data
-        const response = await getUsersPassengerDetails()
+          if ('data' in response) {
+            const passengerData = response.data
+            const document = passengerData.passengerDocuments[0]
 
-        if ('data' in response) {
-          const passengerResponse = response as PassengerDetailsResponse
-          setApiPassengers(passengerResponse.data)
+            // Store the current passenger data for document operations
+            setCurrentPassengerData(passengerData)
 
-          // Find specific passenger if passengerId is provided
-          if (passengerId) {
-            const foundPassenger = passengerResponse.data.find(p => {
-              const formattedId = `P${p.passengerId}`
-              return formattedId === passengerId || p.passengerId.toString() === passengerId.replace('P', '')
-            })
-
-            if (foundPassenger) {
-              const document = foundPassenger.passengerDocuments[0]
-
-              // Debug logging
-              console.log('Found passenger data:', {
-                nationality: foundPassenger.nationality,
-                gender: foundPassenger.gender,
-                countryOfResidence: foundPassenger.countryOfResidence,
-                email: foundPassenger.email,
-                mobileNumber: foundPassenger.mobileNumber
-              })
-
-              setPassenger({
-                id: `P${foundPassenger.passengerId}`,
-                name: `${foundPassenger.firstName} ${foundPassenger.lastName}`,
-                firstName: foundPassenger.firstName,
-                lastName: foundPassenger.lastName,
-                email: foundPassenger.email || '',
-                phone: foundPassenger.mobileNumber || '',
-                hasDocuments: foundPassenger.passengerDocuments.length > 0,
-                gender: foundPassenger.gender || document?.gender || '',
-                dateOfBirth: foundPassenger.dateOfBirth || document?.dateOfBirth || '',
-                nationality: normalizeNationality(foundPassenger.nationality || document?.nationality || ''),
-                passportNumber: document?.documentNumber || '',
-                passportDateOfIssue: document?.dateOfIssue || '',
-                passportExpiry: document?.dateOfExpiry || '',
-                passportPlaceOfIssue: document?.placeOfIssue || '',
-                countryOfResidence: normalizeCountryOfResidence(foundPassenger.countryOfResidence || document?.countryOfResidence || ''),
-                numberOfFlights: foundPassenger.numberOfFlights,
-                mainPassenger: foundPassenger.mainPassenger,
-                passengerFlightId: foundPassenger.passengerFlightId,
-                documentType: document?.documentType || '',
-                documentUrl: document?.documentUrl || ''
-              })
-            } else {
-              // If specific passenger not found, try to find by passenger ID without 'P' prefix
-              const passengerIdNumber = passengerId.replace('P', '')
-              const fallbackPassenger = passengerResponse.data.find(p =>
-                p.passengerId.toString() === passengerIdNumber
-              )
-
-              if (fallbackPassenger) {
-                const document = fallbackPassenger.passengerDocuments[0]
-                setPassenger({
-                  id: `P${fallbackPassenger.passengerId}`,
-                  name: `${fallbackPassenger.firstName} ${fallbackPassenger.lastName}`,
-                  firstName: fallbackPassenger.firstName,
-                  lastName: fallbackPassenger.lastName,
-                  email: fallbackPassenger.email || '',
-                  phone: fallbackPassenger.mobileNumber || '',
-                  hasDocuments: fallbackPassenger.passengerDocuments.length > 0,
-                  gender: fallbackPassenger.gender || document?.gender || '',
-                  dateOfBirth: fallbackPassenger.dateOfBirth || document?.dateOfBirth || '',
-                  nationality: normalizeNationality(fallbackPassenger.nationality || document?.nationality || ''),
-                  passportNumber: document?.documentNumber || '',
-                  passportDateOfIssue: document?.dateOfIssue || '',
-                  passportExpiry: document?.dateOfExpiry || '',
-                  passportPlaceOfIssue: document?.placeOfIssue || '',
-                  countryOfResidence: normalizeCountryOfResidence(fallbackPassenger.countryOfResidence || document?.countryOfResidence || ''),
-                  numberOfFlights: fallbackPassenger.numberOfFlights,
-                  mainPassenger: fallbackPassenger.mainPassenger,
-                  passengerFlightId: fallbackPassenger.passengerFlightId,
-                  documentType: document?.documentType || '',
-                  documentUrl: document?.documentUrl || ''
-                })
-              } else {
-                // If no passenger found by ID, show the first passenger as fallback
-                if (passengerResponse.data.length > 0) {
-                  const firstPassenger = passengerResponse.data[0]
-                  const document = firstPassenger.passengerDocuments[0]
-                  setPassenger({
-                    id: `P${firstPassenger.passengerId}`,
-                    name: `${firstPassenger.firstName} ${firstPassenger.lastName}`,
-                    firstName: firstPassenger.firstName,
-                    lastName: firstPassenger.lastName,
-                    email: firstPassenger.email || '',
-                    phone: firstPassenger.mobileNumber || '',
-                    hasDocuments: firstPassenger.passengerDocuments.length > 0,
-                    gender: firstPassenger.gender || document?.gender || '',
-                    dateOfBirth: firstPassenger.dateOfBirth || document?.dateOfBirth || '',
-                    nationality: normalizeNationality(firstPassenger.nationality || document?.nationality || ''),
-                    passportNumber: document?.documentNumber || '',
-                    passportDateOfIssue: document?.dateOfIssue || '',
-                    passportExpiry: document?.dateOfExpiry || '',
-                    passportPlaceOfIssue: document?.placeOfIssue || '',
-                    countryOfResidence: normalizeCountryOfResidence(firstPassenger.countryOfResidence || document?.countryOfResidence || ''),
-                    numberOfFlights: firstPassenger.numberOfFlights,
-                    mainPassenger: firstPassenger.mainPassenger,
-                    passengerFlightId: firstPassenger.passengerFlightId,
-                    documentType: document?.documentType || '',
-                    documentUrl: document?.documentUrl || ''
-                  })
-                  setError(`Passenger with ID ${passengerId} not found. Showing first available passenger.`)
-                } else {
-                  setError(`Passenger with ID ${passengerId} not found`)
-                }
-              }
-            }
-          } else if (passengerResponse.data.length > 0) {
-            // If no specific passenger ID, show the first passenger
-            const firstPassenger = passengerResponse.data[0]
-            const document = firstPassenger.passengerDocuments[0]
             setPassenger({
-              id: `P${firstPassenger.passengerId}`,
-              name: `${firstPassenger.firstName} ${firstPassenger.lastName}`,
-              firstName: firstPassenger.firstName,
-              lastName: firstPassenger.lastName,
-              email: firstPassenger.email || '',
-              phone: firstPassenger.mobileNumber || '',
-              hasDocuments: firstPassenger.passengerDocuments.length > 0,
-              gender: firstPassenger.gender || document?.gender || '',
-              dateOfBirth: firstPassenger.dateOfBirth || document?.dateOfBirth || '',
-              nationality: normalizeNationality(firstPassenger.nationality || document?.nationality || ''),
+              id: `P${passengerData.passengerId}`,
+              name: `${passengerData.firstName} ${passengerData.lastName}`,
+              firstName: passengerData.firstName,
+              lastName: passengerData.lastName,
+              email: passengerData.email || '',
+              phone: passengerData.mobileNumber || '',
+              hasDocuments: passengerData.passengerDocuments.length > 0,
+              gender: passengerData.gender || document?.gender || '',
+              dateOfBirth: passengerData.dateOfBirth || document?.dateOfBirth || '',
+              nationality: normalizeNationality(passengerData.nationality || document?.nationality || ''),
               passportNumber: document?.documentNumber || '',
               passportDateOfIssue: document?.dateOfIssue || '',
               passportExpiry: document?.dateOfExpiry || '',
               passportPlaceOfIssue: document?.placeOfIssue || '',
-              countryOfResidence: normalizeCountryOfResidence(firstPassenger.countryOfResidence || document?.countryOfResidence || ''),
-              numberOfFlights: firstPassenger.numberOfFlights,
-              mainPassenger: firstPassenger.mainPassenger,
-              passengerFlightId: firstPassenger.passengerFlightId,
+              countryOfResidence: normalizeCountryOfResidence(passengerData.countryOfResidence || document?.countryOfResidence || ''),
+              numberOfFlights: passengerData.numberOfFlights,
+              mainPassenger: passengerData.mainPassenger,
+              passengerFlightId: passengerData.passengerFlightId,
               documentType: document?.documentType || '',
               documentUrl: document?.documentUrl || ''
             })
+            setLoading(false)
+            return
+          } else {
+            const errorResponse = response as ApiError
+            setError(errorResponse.message)
+            setLoading(false)
+            return
           }
-        } else {
-          const errorResponse = response as ApiError
-          setError(errorResponse.message)
         }
+
+        // If no passengerId provided, show error
+        setError('No passenger ID provided in URL')
+        setLoading(false)
+        return
       } catch (err) {
         console.error('Error fetching passenger details:', err)
         setError('Failed to load passenger details')
@@ -316,7 +189,7 @@ const PassengerDetails = () => {
   // Fetch passenger details from API
   useEffect(() => {
     fetchPassengerDetails()
-  }, [passengerId, navigationPassengerData])
+  }, [passengerId])
 
 
 
@@ -403,7 +276,7 @@ const PassengerDetails = () => {
 
       if ('success' in result && result.success) {
         setUploadSuccess('Passenger details updated successfully!')
-        // Refresh passenger details
+        // Refresh passenger details using the new API
         await fetchPassengerDetails()
         setTimeout(() => setUploadSuccess(null), 3000)
       } else {
@@ -431,12 +304,11 @@ const PassengerDetails = () => {
 
       let result
       if (passenger.hasDocuments) {
-        // Update existing passport
-        const document = navigationPassengerData?.passengerDocuments[0] ||
-                       apiPassengers.find(p => p.passengerId.toString() === passenger.id.replace('P', ''))?.passengerDocuments[0]
+        // Update existing passport - get document from current passenger data
+        const document = currentPassengerData?.passengerDocuments[0]
 
         if (!document?.documentId) {
-          setError('Document ID not found. Cannot update passport.')
+          setError('Document ID not found. Cannot update passport. Please refresh the page and try again.')
           return
         }
 
@@ -461,7 +333,7 @@ const PassengerDetails = () => {
       if ('success' in result && result.success) {
         setUploadSuccess(passenger.hasDocuments ? 'Passport updated successfully!' : 'Passport added successfully!')
         setIsPassportEditMode(false)
-        // Refresh passenger details
+        // Refresh passenger details using the new API
         await fetchPassengerDetails()
         setTimeout(() => setUploadSuccess(null), 3000)
       } else {
@@ -598,7 +470,7 @@ const PassengerDetails = () => {
           // Update passenger to show they now have documents
           setPassenger(prev => ({ ...prev, hasDocuments: true }))
 
-          // Reload passenger details immediately to get updated data
+          // Reload passenger details immediately to get updated data using the new API
           await fetchPassengerDetails()
 
           // Clear success message after showing it briefly
@@ -611,7 +483,7 @@ const PassengerDetails = () => {
           // Update passenger to show they now have documents
           setPassenger(prev => ({ ...prev, hasDocuments: true }))
 
-          // Reload passenger details after successful upload
+          // Reload passenger details after successful upload using the new API
           setTimeout(() => {
             fetchPassengerDetails()
             setUploadSuccess(null)
@@ -1067,7 +939,7 @@ const PassengerDetails = () => {
                           onClick={() => {
                             setIsPassportEditMode(false)
                             setValidationErrors({})
-                            // Reset form data if needed
+                            // Reset form data if needed using the new API
                             fetchPassengerDetails()
                           }}
                           variant="outline"

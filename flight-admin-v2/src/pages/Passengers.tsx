@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { User, Mail, FileCheck, FileX, Search } from 'lucide-react'
+import { User, FileCheck, FileX, Search } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -213,11 +213,7 @@ const Passengers = () => {
                 <div
                   key={passenger.id}
                   className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => navigate(`/passengers/${passenger.id}`, {
-                    state: {
-                      passengerData: apiPassengers.find(p => `P${p.passengerId}` === passenger.id)
-                    }
-                  })}
+                  onClick={() => navigate(`/passengers/${passenger.id}`)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -257,11 +253,7 @@ const Passengers = () => {
                     <TableRow
                       key={passenger.id}
                       className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => navigate(`/passengers/${passenger.id}`, {
-                        state: {
-                          passengerData: apiPassengers.find(p => `P${p.passengerId}` === passenger.id)
-                        }
-                      })}
+                      onClick={() => navigate(`/passengers/${passenger.id}`)}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-2">
