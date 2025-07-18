@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 // import SeatPreferenceWidgetSimple from '@/components/SeatPreferenceWidgetSimple'
 import SimpleSeatWidget from '@/components/SimpleSeatWidget'
 import { getB2BUserInfo, B2BUserResponse, ApiError } from '@/api'
+import { logout } from '../api/auth'
 
 const Account = () => {
   const [balance, setBalance] = useState(1250.75)
@@ -63,8 +64,8 @@ const Account = () => {
   }
 
   const handleLogout = () => {
-    // In a real app, this would clear authentication tokens and redirect
-    alert('Logout functionality would be implemented here')
+    logout();
+    window.location.href = '/login';
   }
 
   if (loading) {
@@ -98,14 +99,6 @@ const Account = () => {
           <h1 className="text-3xl font-bold text-gray-900">Account</h1>
           <p className="mt-2 text-gray-600">Manage your profile and account settings</p>
         </div>
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          className="flex items-center space-x-2"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Logout</span>
-        </Button>
       </div>
 
       {/* User Profile Widget */}

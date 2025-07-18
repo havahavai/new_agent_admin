@@ -1,11 +1,11 @@
 import {
   FlightDataByIdsResponse,
   ApiError,
-  getUserId,
-  JWT_TOKEN_ADMIN,
   BASE_API_URL,
 } from "./types";
 import { handleNetworkError } from "./utils";
+import { GetUserId } from "./utils";
+import { getJwtToken } from "./auth";
 
 /**
  * API 2: Get Flight Data by IDs
@@ -17,13 +17,14 @@ export const getFlightDataByIds = async (
   signal?: AbortSignal
 ): Promise<FlightDataByIdsResponse | ApiError> => {
   try {
-    const userId = getUserId();
+    const jwtToken = getJwtToken();
+    const userId = GetUserId(jwtToken);
     const url = `${BASE_API_URL}/admin/getFlightDataByIds?userId=${userId}&flightId=${flightId}&ticketId=${ticketId}`;
 
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        authorization: `Bearer ${JWT_TOKEN_ADMIN}`,
+        authorization: `Bearer ${jwtToken}`,
         "Content-Type": "application/json",
       },
       signal,

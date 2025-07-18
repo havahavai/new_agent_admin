@@ -3,9 +3,11 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   Plane,
   Users,
-  User
+  User,
+  LogOut
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { logout } from '../api/auth'
 
 interface LayoutProps {
   children: ReactNode
@@ -14,6 +16,11 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const location = useLocation()
   const [isMobile, setIsMobile] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+    window.location.href = '/login'
+  }
 
   const navigation = [
     { name: 'Trips', href: '/', icon: Plane },
@@ -86,6 +93,17 @@ const Layout = ({ children }: LayoutProps) => {
                 )
               })}
             </nav>
+
+            {/* Logout button at bottom of sidebar */}
+            <div className="px-2 py-4 border-t border-gray-200">
+              <button
+                onClick={handleLogout}
+                className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              >
+                <LogOut className="mr-3 h-6 w-6" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -100,8 +118,15 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex-1 min-w-0">
               <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Flight Admin</h1>
             </div>
-            <div className="flex items-center ml-4">
+            <div className="flex items-center ml-4 space-x-4">
               <div className="text-sm font-medium text-gray-900 truncate">Admin User</div>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
