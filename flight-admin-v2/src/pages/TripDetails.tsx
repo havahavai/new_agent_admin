@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+
+
+
 import {
   Select,
   SelectContent,
@@ -23,17 +26,13 @@ import {
   Users,
   FileText,
   Download,
-  Clock,
-  MapPin,
   User,
-  Mail,
-  Phone,
-  CreditCard
+  Edit
 } from 'lucide-react'
 import { getBookingDetails, type BookingDetails, type BookingPassenger, type BoardingPass } from '@/data/flights'
-import { BoardingPass as BoardingPassComponent } from '@/components/ui/boarding-pass'
 import { countries } from '@/data/countries'
-import { getFlightDataByIds, FlightDataByIdsResponse, ApiError } from '@/api'
+
+import { getFlightDataByIds, FlightDataByIdsResponse, ApiError, updateTicket } from '@/api'
 
 // Helper function to extract time from ISO string without timezone conversion
 const extractTimeFromISO = (isoString: string): string => {
@@ -89,6 +88,7 @@ const determineFlightStatus = (delayString: string, checkInStatus: string): 'On 
 const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): BookingDetails => {
   const passengers: BookingPassenger[] = apiData.passengers.map((passenger, index) => ({
     id: `passenger-${index}`,
+    passengerId: passenger.passengerId,
     name: `${passenger.firstName} ${passenger.lastName}`,
     email: passenger.email,
     phone: passenger.mobileNumber,
@@ -98,11 +98,12 @@ const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): B
     isMainPassenger: index === 0,
     dateOfBirth: passenger.dateOfBirth || new Date().toISOString(),
     gender: (passenger.gender === 'Female' ? 'Female' : 'Male') as 'Male' | 'Female',
-    nationality: passenger.country || 'US',
+    nationality: passenger.country || '',
     passportNumber: passenger.documents[0]?.number || '',
     passportIssueDate: passenger.documents[0]?.issueDate || '',
     passportExpiry: passenger.documents[0]?.expiry || '',
-    passportIssuePlace: passenger.documents[0]?.country || '',
+    passportIssuePlace: passenger.documents[0]?.issueCountry || '',
+    countryOfResidence: passenger.country || '',
     hasDocuments: passenger.documents.length > 0,
     specialRequests: [],
     boardingPass: passenger.boardingPassUrl ? {
@@ -201,6 +202,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
   )
 }
 
+
 // Gender selector component
 interface GenderSelectorProps {
   label: string
@@ -253,6 +255,7 @@ const ReadOnlyField: React.FC<ReadOnlyFieldProps> = ({
     </div>
   )
 }
+
 
 // Country selector component for nationality
 interface NationalitySelectorProps {
@@ -372,6 +375,20 @@ const TripDetails = () => {
   const [error, setError] = useState<string | null>(null)
   const [apiData, setApiData] = useState<FlightDataByIdsResponse['data'] | null>(null)
 
+  // State for tracking section changes and saving status
+  const [sectionChanges, setSectionChanges] = useState({
+    booking: false,
+    flight: false,
+    passengers: {} as Record<number, boolean>
+  })
+
+  const [sectionSaving, setSectionSaving] = useState({
+    booking: false,
+    flight: false,
+    passengers: {} as Record<number, boolean>
+  })
+
+
   useEffect(() => {
     const fetchFlightDetails = async () => {
       if (!flightId) return
@@ -389,6 +406,8 @@ const TripDetails = () => {
 
           if ('success' in response && response.success) {
             const apiResponse = response as FlightDataByIdsResponse
+
+            // Store API data for reference
             setApiData(apiResponse.data)
 
             // Convert API data to BookingDetails format
@@ -447,6 +466,81 @@ const TripDetails = () => {
     // Here you would typically save to backend
     console.log('Field updated:', section, field, value)
   }
+
+
+
+  const handleSectionSave = async (section: 'booking' | 'flight' | 'passenger', passengerIndex?: number) => {
+    if (!bookingDetails) return
+
+    if (section === 'passenger' && passengerIndex !== undefined) {
+      setSectionSaving(prev => ({
+        ...prev,
+        passengers: { ...prev.passengers, [passengerIndex]: true }
+      }))
+    } else {
+      setSectionSaving(prev => ({ ...prev, [section]: true }))
+    }
+
+    try {
+      if (section === 'booking') {
+        // Get ticketId from URL params or search params
+        const finalTicketId = ticketId || searchParams.get('ticketId')
+
+        if (finalTicketId) {
+          const result = await updateTicket(
+            parseInt(finalTicketId),
+            bookingDetails.pnr,
+            bookingDetails.bookingReference
+          )
+
+          if ('success' in result && result.success) {
+            console.log('Booking details updated successfully:', result)
+          } else {
+            throw new Error(result.message || 'Failed to update booking details')
+          }
+        } else {
+          // Fallback for cases without ticketId - just simulate
+          await new Promise(resolve => setTimeout(resolve, 800))
+          console.log('Saving booking section (no ticketId):', {
+            pnr: bookingDetails.pnr,
+            bookingReference: bookingDetails.bookingReference,
+            contactEmail: bookingDetails.contactEmail,
+            contactPhone: bookingDetails.contactPhone
+          })
+        }
+      } else {
+        // For other sections, simulate API call for now
+        await new Promise(resolve => setTimeout(resolve, 800))
+        console.log(`Saving ${section} section:`, section === 'passenger' && passengerIndex !== undefined
+          ? bookingDetails.passengers[passengerIndex]
+          : bookingDetails.flight)
+      }
+
+      // Clear section-specific changes
+      if (section === 'passenger' && passengerIndex !== undefined) {
+        setSectionChanges(prev => ({
+          ...prev,
+          passengers: { ...prev.passengers, [passengerIndex]: false }
+        }))
+      } else {
+        setSectionChanges(prev => ({ ...prev, [section]: false }))
+      }
+
+    } catch (error) {
+      console.error(`Error saving ${section} section:`, error)
+      setError(`Failed to save ${section} changes. Please try again.`)
+    } finally {
+      if (section === 'passenger' && passengerIndex !== undefined) {
+        setSectionSaving(prev => ({
+          ...prev,
+          passengers: { ...prev.passengers, [passengerIndex]: false }
+        }))
+      } else {
+        setSectionSaving(prev => ({ ...prev, [section]: false }))
+      }
+    }
+  }
+
 
   const handleCopyEmailToAll = (email: string) => {
     if (!bookingDetails || !email) return
@@ -1090,22 +1184,22 @@ const TripDetails = () => {
                   value={bookingReference}
                   onChange={(value) => handleFieldChange('booking', 'bookingReference', value)}
                 />
-
               </div>
               <div className="space-y-4">
                 <EditableField
                   label="Contact Email"
                   value={contactEmail}
+                  className="text-sm"
                   onChange={(value) => handleFieldChange('booking', 'contactEmail', value)}
                   type="email"
                 />
                 <EditableField
                   label="Contact Phone"
                   value={contactPhone}
+                  className="text-sm"
                   onChange={(value) => handleFieldChange('booking', 'contactPhone', value)}
                   type="tel"
                 />
-
               </div>
             </div>
           </AccordionContent>
@@ -1220,6 +1314,17 @@ const TripDetails = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                        {passenger.passengerId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/passengers/P${passenger.passengerId}`)}
+                            className="flex items-center space-x-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span>Edit Details</span>
+                          </Button>
+                        )}
                         {passenger.boardingPass && (
                           <Button
                             size="sm"
@@ -1234,6 +1339,42 @@ const TripDetails = () => {
                     </div>
 
                     {/* Personal Information */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Personal Information</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        <ReadOnlyField
+                          label="First Name"
+                          value={passenger.name.split(' ')[0] || ''}
+                          className="text-sm"
+                        />
+                        <ReadOnlyField
+                          label="Last Name"
+                          value={passenger.name.split(' ').slice(1).join(' ') || ''}
+                          className="text-sm"
+                        />
+                        <ReadOnlyField
+                          label="Date of Birth"
+                          value={new Date(passenger.dateOfBirth).toISOString().split('T')[0]}
+                          className="text-sm"
+                        />
+                        <ReadOnlyField
+                          label="Gender"
+                          value={passenger.gender}
+                          className="text-sm"
+                        />
+                        <ReadOnlyField
+                          label="Country"
+                          value={passenger.nationality}
+                          className="text-sm"
+                        />
+                        <ReadOnlyField
+                          label="Seat Number"
+                          value={passenger.seatNumber || ''}
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-3">
                         <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Personal Information</h4>
@@ -1306,31 +1447,25 @@ const TripDetails = () => {
 
                       <div className="space-y-3">
                         <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Passport Details</h4>
-                        <div className="space-y-3">
-                          <EditableField
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                          <ReadOnlyField
                             label="Passport Number"
                             value={passenger.passportNumber}
-                            onChange={(value) => handleFieldChange('passenger', 'passportNumber', value, index)}
                             className="text-sm"
                           />
-                          <EditableField
+                          <ReadOnlyField
                             label="Issue Date"
                             value={passenger.passportIssueDate ? new Date(passenger.passportIssueDate).toISOString().split('T')[0] : ''}
-                            onChange={(value) => handleFieldChange('passenger', 'passportIssueDate', value ? new Date(value).toISOString() : '', index)}
-                            type="date"
                             className="text-sm"
                           />
-                          <EditableField
+                          <ReadOnlyField
                             label="Expiry Date"
                             value={passenger.passportExpiry ? new Date(passenger.passportExpiry).toISOString().split('T')[0] : ''}
-                            onChange={(value) => handleFieldChange('passenger', 'passportExpiry', value ? new Date(value).toISOString() : '', index)}
-                            type="date"
                             className="text-sm"
                           />
-                          <CountrySelector
-                            label="Issue Place"
+                          <ReadOnlyField
+                            label="Issue Country"
                             value={passenger.passportIssuePlace}
-                            onChange={(value) => handleFieldChange('passenger', 'passportIssuePlace', value, index)}
                             className="text-sm"
                           />
                         </div>
@@ -1356,6 +1491,8 @@ const TripDetails = () => {
                         </div>
                       </div>
                     )}
+
+
                   </CardContent>
                 </Card>
               ))}

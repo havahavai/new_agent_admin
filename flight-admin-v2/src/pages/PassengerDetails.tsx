@@ -18,16 +18,29 @@ import {
   User,
   FileText,
   Upload,
-  Download
+  Download,
+  Settings
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { countries } from '@/data/countries'
-import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError, uploadUserDocument, GetUserId } from '@/api'
+import {
+  PassengerDetailsResponse,
+  PassengerDetail,
+  ApiError,
+  uploadUserDocument,
+  GetUserId,
+  updatePassenger,
+  addPassport,
+  updatePassport
+} from '@/api'
+import { getUsersPassengerDetails } from '@/api/passengerDetails'
+import SimpleSeatWidget from '@/components/SimpleSeatWidget'
 
 const PassengerDetails = () => {
+  // Updated component with document preview fixes
   const navigate = useNavigate()
   const location = useLocation()
   const { id: passengerId } = useParams<{ id: string }>()
@@ -36,6 +49,15 @@ const PassengerDetails = () => {
   const [apiPassengers, setApiPassengers] = useState<PassengerDetail[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+  const [showInvalidDocumentDialog, setShowInvalidDocumentDialog] = useState(false)
+
+  // State for update operations
+  const [isUpdatingPassenger, setIsUpdatingPassenger] = useState(false)
+  const [isUpdatingPassport, setIsUpdatingPassport] = useState(false)
+  const [isPassportEditMode, setIsPassportEditMode] = useState(false)
+
+  // Form validation states
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   // Get passenger data from navigation state if available
   const navigationPassengerData = location.state?.passengerData as PassengerDetail | undefined
@@ -78,17 +100,17 @@ const PassengerDetails = () => {
             name: `${navigationPassengerData.firstName} ${navigationPassengerData.lastName}`,
             firstName: navigationPassengerData.firstName,
             lastName: navigationPassengerData.lastName,
-            email: 'N/A',
-            phone: 'N/A',
+            email: navigationPassengerData.email || '',
+            phone: navigationPassengerData.mobileNumber || '',
             hasDocuments: navigationPassengerData.passengerDocuments.length > 0,
-            gender: document?.gender || navigationPassengerData.gender || '',
+            gender: navigationPassengerData.gender || document?.gender || '',
             dateOfBirth: navigationPassengerData.dateOfBirth || document?.dateOfBirth || '',
-            nationality: navigationPassengerData.nationality || document?.nationality || '',
+            nationality: normalizeNationality(navigationPassengerData.nationality || document?.nationality || ''),
             passportNumber: document?.documentNumber || '',
             passportDateOfIssue: document?.dateOfIssue || '',
             passportExpiry: document?.dateOfExpiry || '',
             passportPlaceOfIssue: document?.placeOfIssue || '',
-            countryOfResidence: navigationPassengerData.countryOfResidence || document?.countryOfResidence || '',
+            countryOfResidence: normalizeCountryOfResidence(navigationPassengerData.countryOfResidence || document?.countryOfResidence || ''),
             numberOfFlights: navigationPassengerData.numberOfFlights,
             mainPassenger: navigationPassengerData.mainPassenger,
             passengerFlightId: navigationPassengerData.passengerFlightId,
@@ -115,22 +137,32 @@ const PassengerDetails = () => {
 
             if (foundPassenger) {
               const document = foundPassenger.passengerDocuments[0]
+
+              // Debug logging
+              console.log('Found passenger data:', {
+                nationality: foundPassenger.nationality,
+                gender: foundPassenger.gender,
+                countryOfResidence: foundPassenger.countryOfResidence,
+                email: foundPassenger.email,
+                mobileNumber: foundPassenger.mobileNumber
+              })
+
               setPassenger({
                 id: `P${foundPassenger.passengerId}`,
                 name: `${foundPassenger.firstName} ${foundPassenger.lastName}`,
                 firstName: foundPassenger.firstName,
                 lastName: foundPassenger.lastName,
-                email: 'N/A', // API doesn't provide email
-                phone: 'N/A', // API doesn't provide phone
+                email: foundPassenger.email || '',
+                phone: foundPassenger.mobileNumber || '',
                 hasDocuments: foundPassenger.passengerDocuments.length > 0,
-                gender: document?.gender || foundPassenger.gender || '',
+                gender: foundPassenger.gender || document?.gender || '',
                 dateOfBirth: foundPassenger.dateOfBirth || document?.dateOfBirth || '',
-                nationality: foundPassenger.nationality || document?.nationality || '',
+                nationality: normalizeNationality(foundPassenger.nationality || document?.nationality || ''),
                 passportNumber: document?.documentNumber || '',
                 passportDateOfIssue: document?.dateOfIssue || '',
                 passportExpiry: document?.dateOfExpiry || '',
                 passportPlaceOfIssue: document?.placeOfIssue || '',
-                countryOfResidence: foundPassenger.countryOfResidence || document?.countryOfResidence || '',
+                countryOfResidence: normalizeCountryOfResidence(foundPassenger.countryOfResidence || document?.countryOfResidence || ''),
                 numberOfFlights: foundPassenger.numberOfFlights,
                 mainPassenger: foundPassenger.mainPassenger,
                 passengerFlightId: foundPassenger.passengerFlightId,
@@ -151,17 +183,17 @@ const PassengerDetails = () => {
                   name: `${fallbackPassenger.firstName} ${fallbackPassenger.lastName}`,
                   firstName: fallbackPassenger.firstName,
                   lastName: fallbackPassenger.lastName,
-                  email: 'N/A',
-                  phone: 'N/A',
+                  email: fallbackPassenger.email || '',
+                  phone: fallbackPassenger.mobileNumber || '',
                   hasDocuments: fallbackPassenger.passengerDocuments.length > 0,
-                  gender: document?.gender || fallbackPassenger.gender || '',
+                  gender: fallbackPassenger.gender || document?.gender || '',
                   dateOfBirth: fallbackPassenger.dateOfBirth || document?.dateOfBirth || '',
-                  nationality: fallbackPassenger.nationality || document?.nationality || '',
+                  nationality: normalizeNationality(fallbackPassenger.nationality || document?.nationality || ''),
                   passportNumber: document?.documentNumber || '',
                   passportDateOfIssue: document?.dateOfIssue || '',
                   passportExpiry: document?.dateOfExpiry || '',
                   passportPlaceOfIssue: document?.placeOfIssue || '',
-                  countryOfResidence: fallbackPassenger.countryOfResidence || document?.countryOfResidence || '',
+                  countryOfResidence: normalizeCountryOfResidence(fallbackPassenger.countryOfResidence || document?.countryOfResidence || ''),
                   numberOfFlights: fallbackPassenger.numberOfFlights,
                   mainPassenger: fallbackPassenger.mainPassenger,
                   passengerFlightId: fallbackPassenger.passengerFlightId,
@@ -178,17 +210,17 @@ const PassengerDetails = () => {
                     name: `${firstPassenger.firstName} ${firstPassenger.lastName}`,
                     firstName: firstPassenger.firstName,
                     lastName: firstPassenger.lastName,
-                    email: 'N/A',
-                    phone: 'N/A',
+                    email: firstPassenger.email || '',
+                    phone: firstPassenger.mobileNumber || '',
                     hasDocuments: firstPassenger.passengerDocuments.length > 0,
-                    gender: document?.gender || firstPassenger.gender || '',
+                    gender: firstPassenger.gender || document?.gender || '',
                     dateOfBirth: firstPassenger.dateOfBirth || document?.dateOfBirth || '',
-                    nationality: firstPassenger.nationality || document?.nationality || '',
+                    nationality: normalizeNationality(firstPassenger.nationality || document?.nationality || ''),
                     passportNumber: document?.documentNumber || '',
                     passportDateOfIssue: document?.dateOfIssue || '',
                     passportExpiry: document?.dateOfExpiry || '',
                     passportPlaceOfIssue: document?.placeOfIssue || '',
-                    countryOfResidence: firstPassenger.countryOfResidence || document?.countryOfResidence || '',
+                    countryOfResidence: normalizeCountryOfResidence(firstPassenger.countryOfResidence || document?.countryOfResidence || ''),
                     numberOfFlights: firstPassenger.numberOfFlights,
                     mainPassenger: firstPassenger.mainPassenger,
                     passengerFlightId: firstPassenger.passengerFlightId,
@@ -210,17 +242,17 @@ const PassengerDetails = () => {
               name: `${firstPassenger.firstName} ${firstPassenger.lastName}`,
               firstName: firstPassenger.firstName,
               lastName: firstPassenger.lastName,
-              email: 'N/A',
-              phone: 'N/A',
+              email: firstPassenger.email || '',
+              phone: firstPassenger.mobileNumber || '',
               hasDocuments: firstPassenger.passengerDocuments.length > 0,
-              gender: document?.gender || firstPassenger.gender || '',
+              gender: firstPassenger.gender || document?.gender || '',
               dateOfBirth: firstPassenger.dateOfBirth || document?.dateOfBirth || '',
-              nationality: firstPassenger.nationality || document?.nationality || '',
+              nationality: normalizeNationality(firstPassenger.nationality || document?.nationality || ''),
               passportNumber: document?.documentNumber || '',
               passportDateOfIssue: document?.dateOfIssue || '',
               passportExpiry: document?.dateOfExpiry || '',
               passportPlaceOfIssue: document?.placeOfIssue || '',
-              countryOfResidence: firstPassenger.countryOfResidence || document?.countryOfResidence || '',
+              countryOfResidence: normalizeCountryOfResidence(firstPassenger.countryOfResidence || document?.countryOfResidence || ''),
               numberOfFlights: firstPassenger.numberOfFlights,
               mainPassenger: firstPassenger.mainPassenger,
               passengerFlightId: firstPassenger.passengerFlightId,
@@ -240,6 +272,38 @@ const PassengerDetails = () => {
       }
     }
 
+  // Helper function to normalize nationality and country values
+  const normalizeNationality = (nationality: string): string => {
+    if (!nationality) return ''
+
+    // First, check if it's already a country code (2 letters)
+    if (nationality.length === 2) {
+      const upperCode = nationality.toUpperCase()
+      const matchingCountry = countries.find(country => country.code === upperCode)
+      return matchingCountry ? upperCode : ''
+    }
+
+    // Convert to proper case and find matching nationality in countries array
+    const normalizedNationality = nationality.toLowerCase()
+    const matchingCountry = countries.find(country =>
+      country.nationality.toLowerCase() === normalizedNationality
+    )
+
+    return matchingCountry ? matchingCountry.code : ''
+  }
+
+  const normalizeCountryOfResidence = (countryName: string): string => {
+    if (!countryName) return ''
+
+    // Convert to proper case and find matching country name in countries array
+    const normalizedCountryName = countryName.toLowerCase()
+    const matchingCountry = countries.find(country =>
+      country.name.toLowerCase() === normalizedCountryName
+    )
+
+    return matchingCountry ? matchingCountry.name.toLowerCase() : countryName.toLowerCase()
+  }
+
   // Fetch passenger details from API
   useEffect(() => {
     fetchPassengerDetails()
@@ -253,7 +317,156 @@ const PassengerDetails = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setPassenger(prev => ({ ...prev, [field]: value }))
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: '' }))
+    }
   }
+
+  // Validation function for passenger update (only validate filled fields)
+  const validatePassengerForm = () => {
+    const errors: Record<string, string> = {}
+
+    // Only validate email format if it's provided
+    if (passenger.email && passenger.email.trim() && !/\S+@\S+\.\S+/.test(passenger.email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    // Note: For update, we allow partial updates, so no required field validation
+    // The API will handle which fields are actually required
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Validate passport form (using passenger data directly)
+  const validatePassportForm = () => {
+    const errors: Record<string, string> = {}
+
+    if (!passenger.passportNumber?.trim()) {
+      errors.passportNumber = 'Document number is required'
+    }
+    if (!passenger.passportExpiry) {
+      errors.passportExpiry = 'Expiry date is required'
+    } else {
+      const expiryDate = new Date(passenger.passportExpiry)
+      const today = new Date()
+      if (expiryDate <= today) {
+        errors.passportExpiry = 'Expiry date must be in the future'
+      }
+    }
+    if (!passenger.passportPlaceOfIssue?.trim()) {
+      errors.passportPlaceOfIssue = 'Place of issue is required'
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Handle passenger update
+  const handleUpdatePassenger = async () => {
+    if (!validatePassengerForm()) {
+      return
+    }
+
+    try {
+      setIsUpdatingPassenger(true)
+      setError(null)
+
+      const passengerIdNumber = passenger.id.replace('P', '')
+
+      // Convert nationality code back to nationality name for API
+      const nationalityForApi = passenger.nationality ?
+        countries.find(country => country.code === passenger.nationality)?.nationality || passenger.nationality
+        : ''
+
+      const result = await updatePassenger(
+        passengerIdNumber,
+        passenger.firstName,
+        passenger.lastName,
+        passenger.phone || '',
+        passenger.email || '',
+        passenger.dateOfBirth,
+        passenger.gender,
+        nationalityForApi,
+        passenger.countryOfResidence
+      )
+
+      if ('success' in result && result.success) {
+        setUploadSuccess('Passenger details updated successfully!')
+        // Refresh passenger details
+        await fetchPassengerDetails()
+        setTimeout(() => setUploadSuccess(null), 3000)
+      } else {
+        setError(result.message || 'Failed to update passenger details')
+      }
+    } catch (err) {
+      console.error('Update passenger error:', err)
+      setError('An unexpected error occurred while updating passenger details')
+    } finally {
+      setIsUpdatingPassenger(false)
+    }
+  }
+
+  // Handle add/update passport (unified function for inline editing)
+  const handleSavePassport = async () => {
+    if (!validatePassportForm()) {
+      return
+    }
+
+    try {
+      setIsUpdatingPassport(true)
+      setError(null)
+
+      const passengerIdNumber = parseInt(passenger.id.replace('P', ''))
+
+      let result
+      if (passenger.hasDocuments) {
+        // Update existing passport
+        const document = navigationPassengerData?.passengerDocuments[0] ||
+                       apiPassengers.find(p => p.passengerId.toString() === passenger.id.replace('P', ''))?.passengerDocuments[0]
+
+        if (!document?.documentId) {
+          setError('Document ID not found. Cannot update passport.')
+          return
+        }
+
+        result = await updatePassport(
+          document.documentId,
+          passenger.passportNumber || '',
+          passenger.passportDateOfIssue || '',
+          passenger.passportExpiry || '',
+          passenger.passportPlaceOfIssue || ''
+        )
+      } else {
+        // Add new passport
+        result = await addPassport(
+          passengerIdNumber,
+          passenger.passportNumber || '',
+          passenger.passportDateOfIssue || '',
+          passenger.passportExpiry || '',
+          passenger.passportPlaceOfIssue || ''
+        )
+      }
+
+      if ('success' in result && result.success) {
+        setUploadSuccess(passenger.hasDocuments ? 'Passport updated successfully!' : 'Passport added successfully!')
+        setIsPassportEditMode(false)
+        // Refresh passenger details
+        await fetchPassengerDetails()
+        setTimeout(() => setUploadSuccess(null), 3000)
+      } else {
+        setError(result.message || 'Failed to save passport')
+      }
+    } catch (err) {
+      console.error('Save passport error:', err)
+      setError('An unexpected error occurred while saving passport')
+    } finally {
+      setIsUpdatingPassport(false)
+    }
+  }
+
+
 
   const handleViewDocument = (documentUrl: string) => {
     if (documentUrl) {
@@ -466,38 +679,41 @@ const PassengerDetails = () => {
                 <span className="hidden sm:inline">Back to Passengers</span>
                 <span className="sm:hidden">Back</span>
               </Button>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{passenger.name}</h1>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <span>ID: {passenger.id}</span>
-                  {passenger.mainPassenger && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Main Passenger
-                    </span>
-                  )}
-                  <span>{passenger.numberOfFlights} flights</span>
+            </div>
+
+            {/* Header content row */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{passenger.name}</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-gray-600">
+                  <p>Passenger ID: <span className="font-semibold text-gray-900">{passenger.id}</span></p>
+                  <p className="flex items-center space-x-1">
+                    <span>•</span>
+                    <span>{passenger.numberOfFlights} flight{passenger.numberOfFlights !== 1 ? 's' : ''}</span>
+                  </p>
+                  <p className="flex items-center space-x-1">
+                    <span>•</span>
+                    <span>{passenger.mainPassenger ? 'Primary' : 'Secondary'} passenger</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  passenger.hasDocuments
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {passenger.hasDocuments ? '✓ Documents Complete' : '✗ Documents Missing'}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Flight Statistics */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{passenger.numberOfFlights}</div>
-              <div className="text-sm text-blue-800">Total Flights</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{passenger.hasDocuments ? '✓' : '✗'}</div>
-              <div className="text-sm text-green-800">Documents Status</div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{passenger.mainPassenger ? 'Primary' : 'Secondary'}</div>
-              <div className="text-sm text-purple-800">Passenger Type</div>
-            </div>
-          </div>
 
-          <Accordion type="single" collapsible defaultValue="personal" className="w-full">
+
+          {/* Accordion Sections */}
+          <Accordion type="single" collapsible defaultValue="personal" className="w-full space-y-4">
+            {/* Personal Information */}
             <AccordionItem value="personal">
               <AccordionTrigger className="text-left">
                 <div className="flex items-center space-x-2">
@@ -506,111 +722,161 @@ const PassengerDetails = () => {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        First Name
+                      </label>
+                      <Input
+                        value={passenger.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        className={`mt-1 h-9 text-sm ${validationErrors.firstName ? 'border-red-500' : ''}`}
+                        placeholder="Enter first name"
+                      />
+                      {validationErrors.firstName && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.firstName}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Last Name
+                      </label>
+                      <Input
+                        value={passenger.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className={`mt-1 h-9 text-sm ${validationErrors.lastName ? 'border-red-500' : ''}`}
+                        placeholder="Enter last name"
+                      />
+                      {validationErrors.lastName && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.lastName}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Date of Birth
+                      </label>
+                      <Input
+                        type="date"
+                        value={passenger.dateOfBirth ? (
+                          passenger.dateOfBirth.includes('T')
+                            ? passenger.dateOfBirth.split('T')[0]
+                            : passenger.dateOfBirth
+                        ) : ''}
+                        onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                        className={`mt-1 h-9 text-sm ${validationErrors.dateOfBirth ? 'border-red-500' : ''}`}
+                      />
+                      {validationErrors.dateOfBirth && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.dateOfBirth}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Gender
+                      </label>
+                      <Select
+                        value={passenger.gender}
+                        onValueChange={(value) => handleInputChange('gender', value)}
+                      >
+                        <SelectTrigger className={`mt-1 h-9 text-sm ${validationErrors.gender ? 'border-red-500' : ''}`}>
+                          <SelectValue placeholder="Select Gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {validationErrors.gender && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.gender}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Email</label>
+                      <Input
+                        type="email"
+                        value={passenger.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className={`mt-1 h-9 text-sm ${validationErrors.email ? 'border-red-500' : ''}`}
+                        placeholder="Enter email address"
+                      />
+                      {validationErrors.email && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Phone Number</label>
+                      <PhoneInput
+                        value={passenger.phone}
+                        onChange={(value) => handleInputChange('phone', value || '')}
+                        defaultCountry="IN"
+                        className="mt-1"
+                        style={{
+                          '--PhoneInputCountryFlag-height': '1em',
+                          '--PhoneInputCountrySelectArrow-color': '#6b7280',
+                          '--PhoneInput-color--focus': '#2563eb',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Nationality</label>
+                      <Select
+                        value={passenger.nationality}
+                        onValueChange={(value) => handleInputChange('nationality', value)}
+                      >
+                        <SelectTrigger className="mt-1 h-9 text-sm">
+                          <SelectValue placeholder="Select Nationality" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.nationality}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Country of Residence</label>
+                      <Select
+                        value={passenger.countryOfResidence}
+                        onValueChange={(value) => handleInputChange('countryOfResidence', value)}
+                      >
+                        <SelectTrigger className="mt-1 h-9 text-sm">
+                          <SelectValue placeholder="Select Country of Residence" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country.code} value={country.name.toLowerCase()}>
+                              {country.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+              </div>
 
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">First Name</label>
-                  <Input
-                    value={passenger.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    className="mt-1"
-                    placeholder="Enter first name"
-                  />
+              {/* Update Passenger Button */}
+              <div className="border-t pt-4 mt-4">
+                <div className="mb-3">
+                  <p className="text-sm text-gray-600">
+                    You can update any individual field or multiple fields at once. Only the fields you modify will be updated.
+                  </p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Last Name</label>
-                  <Input
-                    value={passenger.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    className="mt-1"
-                    placeholder="Enter last name"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                  <Input
-                    type="date"
-                    value={passenger.dateOfBirth}
-                    onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Gender</label>
-                  <Select
-                    value={passenger.gender}
-                    onValueChange={(value) => handleInputChange('gender', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select Gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <Input
-                    type="email"
-                    value={passenger.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Phone</label>
-                  <PhoneInput
-                    value={passenger.phone}
-                    onChange={(value) => handleInputChange('phone', value || '')}
-                    defaultCountry="US"
-                    className="mt-1"
-                    style={{
-                      '--PhoneInputCountryFlag-height': '1em',
-                      '--PhoneInputCountrySelectArrow-color': '#6b7280',
-                      '--PhoneInput-color--focus': '#2563eb',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Nationality</label>
-                  <Select
-                    value={passenger.nationality}
-                    onValueChange={(value) => handleInputChange('nationality', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select Nationality" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.code}>
-                          {country.nationality}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Country of Residence</label>
-                  <Select
-                    value={passenger.countryOfResidence}
-                    onValueChange={(value) => handleInputChange('countryOfResidence', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select Country of Residence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.name.toLowerCase()}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Button
+                  onClick={handleUpdatePassenger}
+                  disabled={isUpdatingPassenger}
+                  className="w-full sm:w-auto"
+                >
+                  {isUpdatingPassenger ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Passenger Details'
+                  )}
+                </Button>
               </div>
             </div>
           </AccordionContent>
@@ -646,9 +912,13 @@ const PassengerDetails = () => {
                   <Input
                     value={passenger.passportNumber || ''}
                     onChange={(e) => handleInputChange('passportNumber', e.target.value)}
-                    className="mt-1"
+                    className={`mt-1 h-9 text-sm ${validationErrors.passportNumber ? 'border-red-500' : ''}`}
                     placeholder="Enter document number"
+                    disabled={!isPassportEditMode}
                   />
+                  {validationErrors.passportNumber && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.passportNumber}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Date of Issue</label>
@@ -656,7 +926,8 @@ const PassengerDetails = () => {
                     type="date"
                     value={passenger.passportDateOfIssue || ''}
                     onChange={(e) => handleInputChange('passportDateOfIssue', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 h-9 text-sm"
+                    disabled={!isPassportEditMode}
                   />
                 </div>
                 <div>
@@ -665,21 +936,41 @@ const PassengerDetails = () => {
                     type="date"
                     value={passenger.passportExpiry || ''}
                     onChange={(e) => handleInputChange('passportExpiry', e.target.value)}
-                    className="mt-1"
+                    className={`mt-1 h-9 text-sm ${validationErrors.passportExpiry ? 'border-red-500' : ''}`}
+                    disabled={!isPassportEditMode}
                   />
+                  {validationErrors.passportExpiry && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.passportExpiry}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Place of Issue</label>
-                  <Input
+                  <label className="text-sm font-medium text-gray-700">
+                    Place of Issue <span className="text-red-500">*</span>
+                  </label>
+                  <Select
                     value={passenger.passportPlaceOfIssue || ''}
-                    onChange={(e) => handleInputChange('passportPlaceOfIssue', e.target.value)}
-                    className="mt-1"
-                    placeholder="e.g., Mumbai"
-                  />
+                    onValueChange={(value) => handleInputChange('passportPlaceOfIssue', value)}
+                    disabled={!isPassportEditMode}
+                  >
+                    <SelectTrigger className={`mt-1 h-9 text-sm ${validationErrors.passportPlaceOfIssue ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.name}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.passportPlaceOfIssue && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.passportPlaceOfIssue}</p>
+                  )}
                 </div>
               </div>
 
-              {passenger.hasDocuments && (
+              {/* Document Preview Section */}
+              {passenger.hasDocuments && passenger.documentUrl && (
                 <div className="border-t pt-4">
                   <label className="text-sm font-medium text-gray-700">Document Preview</label>
                   <div className="mt-2 p-4 border-2 border-dashed border-gray-300 rounded-lg">
@@ -708,7 +999,6 @@ const PassengerDetails = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDownloadDocument(passenger.documentUrl)}
-                        disabled={!passenger.documentUrl}
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Download
@@ -717,20 +1007,78 @@ const PassengerDetails = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleViewDocument(passenger.documentUrl)}
-                        disabled={!passenger.documentUrl}
                       >
                         View
                       </Button>
                     </div>
-                    {!passenger.documentUrl && (
-                      <p className="text-xs text-gray-500 text-center mt-2">
-                        Document URL not available
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
 
+              {/* Passport Management Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Passport Management</h4>
+                  <div className="flex gap-2">
+                    {!isPassportEditMode ? (
+                      <Button
+                        onClick={() => setIsPassportEditMode(true)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center"
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        {passenger.hasDocuments ? 'Edit Details' : 'Add Details'}
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={handleSavePassport}
+                          disabled={isUpdatingPassport}
+                          size="sm"
+                          className="flex items-center"
+                        >
+                          {isUpdatingPassport ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Save
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setIsPassportEditMode(false)
+                            setValidationErrors({})
+                            // Reset form data if needed
+                            fetchPassengerDetails()
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {isPassportEditMode && (
+                  <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <strong>Edit Mode:</strong> You can now modify the passport details above. Click "Save" when done or "Cancel" to discard changes.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+
+
+              {/* Document Upload Section */}
               <div className="border-t pt-4">
                 <label className="text-sm font-medium text-gray-700">Upload Document</label>
                 <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -758,10 +1106,10 @@ const PassengerDetails = () => {
                       </>
                     )}
                   </Button>
+                  <p className="text-sm text-gray-500">
+                    Supported formats: PDF, JPG, PNG (Max 5MB)
+                  </p>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
-                  Supported formats: PDF, JPG, PNG (Max 5MB)
-                </p>
               </div>
             </div>
           </AccordionContent>

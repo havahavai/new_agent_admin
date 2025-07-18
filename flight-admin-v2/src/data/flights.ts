@@ -3,6 +3,7 @@ import type { Flight } from "@/components/ui/flight-list";
 // Extended interfaces for booking/PNR details
 export interface BookingPassenger {
   id: string;
+  passengerId?: number;
   name: string;
   email?: string;
   phone?: string;
@@ -75,6 +76,28 @@ export const generateDateRange = (days: number = 30): Date[] => {
     dates.push(date);
   }
 
+  return dates;
+};
+
+// Generate dates for a range from a given start date
+export const generateDateRangeFrom = (
+  startDate: Date,
+  days: number = 30,
+  direction: "future" | "past" = "future"
+): Date[] => {
+  const dates: Date[] = [];
+  for (let i = 0; i < days; i++) {
+    const date = new Date(startDate);
+    if (direction === "future") {
+      date.setDate(startDate.getDate() + i);
+    } else {
+      date.setDate(startDate.getDate() - i);
+    }
+    dates.push(date);
+  }
+  if (direction === "past") {
+    dates.reverse(); // so past dates are in ascending order
+  }
   return dates;
 };
 
@@ -328,8 +351,15 @@ export const getFlightsForDate = (date: Date): Flight[] => {
 };
 
 // Get date carousel data
-export const getDateCarouselData = (days: number = 30) => {
-  const dates = generateDateRange(days);
+export const getDateCarouselData = (options?: {
+  days?: number;
+  startDate?: Date;
+  direction?: "future" | "past";
+}) => {
+  const days = options?.days ?? 30;
+  const startDate = options?.startDate ?? new Date();
+  const direction = options?.direction ?? "future";
+  const dates = generateDateRangeFrom(startDate, days, direction);
 
   return dates.map((date) => {
     const flights = getFlightsForDate(date);
@@ -337,6 +367,57 @@ export const getDateCarouselData = (days: number = 30) => {
       date,
       hasFlights: flights.length > 0,
       flightCount: flights.length,
+    };
+  });
+};
+
+// Helper function to find the first date with flights from today onwards
+export const findFirstDateWithFlights = (
+  dateCarouselData: Array<{ date: Date; hasFlights: boolean }>
+) => {
+  const today = new Date();
+  const todayData = dateCarouselData.find(
+    (item) => item.date.toDateString() === today.toDateString()
+  );
+
+  if (todayData && todayData.hasFlights) {
+    // Today has flights, return it
+    return today;
+  } else {
+    // Today has no flights, find first future date with flights
+    const firstFlightDate = dateCarouselData.find(
+      (item) => item.date >= today && item.hasFlights
+    );
+    return firstFlightDate ? firstFlightDate.date : today; // fallback to today if no flights found
+  }
+};
+
+// Get date carousel data for API flights - always shows today + next 30 days regardless of flight availability
+export const getDateCarouselDataForApi = (
+  apiFlights: any[] = [],
+  options?: { days?: number; startDate?: Date }
+) => {
+  const days = options?.days ?? 30;
+  const startDate = options?.startDate ?? new Date();
+  const dates = generateDateRangeFrom(startDate, days, "future");
+
+  // Group API flights by date
+  const flightsByDate: { [key: string]: any[] } = {};
+  apiFlights.forEach((flight) => {
+    const departureDate = new Date(flight.departureTime).toDateString();
+    if (!flightsByDate[departureDate]) {
+      flightsByDate[departureDate] = [];
+    }
+    flightsByDate[departureDate].push(flight);
+  });
+
+  return dates.map((date) => {
+    const dateString = date.toDateString();
+    const flightsForDate = flightsByDate[dateString] || [];
+    return {
+      date,
+      hasFlights: flightsForDate.length > 0,
+      flightCount: flightsForDate.length,
     };
   });
 };
