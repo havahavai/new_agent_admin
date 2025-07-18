@@ -26,7 +26,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { countries } from '@/data/countries'
-import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError } from '@/api'
+import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError, uploadUserDocument, GetUserId } from '@/api'
 import SimpleSeatWidget from '@/components/SimpleSeatWidget'
 
 const PassengerDetails = () => {
@@ -36,6 +36,8 @@ const PassengerDetails = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [apiPassengers, setApiPassengers] = useState<PassengerDetail[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
 
   // Get passenger data from navigation state if available
   const navigationPassengerData = location.state?.passengerData as PassengerDetail | undefined
@@ -60,12 +62,12 @@ const PassengerDetails = () => {
     numberOfFlights: 0,
     mainPassenger: false,
     passengerFlightId: 0,
-    documentType: ''
+    documentType: '',
+    documentUrl: ''
   })
 
-  // Fetch passenger details from API
-  useEffect(() => {
-    const fetchPassengerDetails = async () => {
+  // Function to fetch passenger details from API
+  const fetchPassengerDetails = async () => {
       try {
         setLoading(true)
         setError(null)
@@ -92,7 +94,8 @@ const PassengerDetails = () => {
             numberOfFlights: navigationPassengerData.numberOfFlights,
             mainPassenger: navigationPassengerData.mainPassenger,
             passengerFlightId: navigationPassengerData.passengerFlightId,
-            documentType: document?.documentType || ''
+            documentType: document?.documentType || '',
+            documentUrl: document?.documentUrl || ''
           })
           setLoading(false)
           return
@@ -133,7 +136,8 @@ const PassengerDetails = () => {
                 numberOfFlights: foundPassenger.numberOfFlights,
                 mainPassenger: foundPassenger.mainPassenger,
                 passengerFlightId: foundPassenger.passengerFlightId,
-                documentType: document?.documentType || ''
+                documentType: document?.documentType || '',
+                documentUrl: document?.documentUrl || ''
               })
             } else {
               // If specific passenger not found, try to find by passenger ID without 'P' prefix
@@ -163,7 +167,8 @@ const PassengerDetails = () => {
                   numberOfFlights: fallbackPassenger.numberOfFlights,
                   mainPassenger: fallbackPassenger.mainPassenger,
                   passengerFlightId: fallbackPassenger.passengerFlightId,
-                  documentType: document?.documentType || ''
+                  documentType: document?.documentType || '',
+                  documentUrl: document?.documentUrl || ''
                 })
               } else {
                 // If no passenger found by ID, show the first passenger as fallback
@@ -189,7 +194,8 @@ const PassengerDetails = () => {
                     numberOfFlights: firstPassenger.numberOfFlights,
                     mainPassenger: firstPassenger.mainPassenger,
                     passengerFlightId: firstPassenger.passengerFlightId,
-                    documentType: document?.documentType || ''
+                    documentType: document?.documentType || '',
+                    documentUrl: document?.documentUrl || ''
                   })
                   setError(`Passenger with ID ${passengerId} not found. Showing first available passenger.`)
                 } else {
@@ -220,7 +226,8 @@ const PassengerDetails = () => {
               numberOfFlights: firstPassenger.numberOfFlights,
               mainPassenger: firstPassenger.mainPassenger,
               passengerFlightId: firstPassenger.passengerFlightId,
-              documentType: document?.documentType || ''
+              documentType: document?.documentType || '',
+              documentUrl: document?.documentUrl || ''
             })
           }
         } else {
@@ -235,6 +242,8 @@ const PassengerDetails = () => {
       }
     }
 
+  // Fetch passenger details from API
+  useEffect(() => {
     fetchPassengerDetails()
   }, [passengerId, navigationPassengerData])
 
@@ -248,13 +257,151 @@ const PassengerDetails = () => {
     setPassenger(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleViewDocument = (documentUrl: string) => {
+    if (documentUrl) {
+      window.open(documentUrl, '_blank')
+    }
+  }
+
+  const handleDownloadDocument = async (documentUrl: string, fileName?: string) => {
+    if (!documentUrl) return
+
+    try {
+      // Try direct download first (for S3 URLs that support it)
+      const link = document.createElement('a')
+      link.href = documentUrl
+
+      // Set filename - extract from URL or use default
+      const urlParts = documentUrl.split('/')
+      const urlFileName = urlParts[urlParts.length - 1]
+      const defaultFileName = fileName || urlFileName || `${passenger.documentType || 'document'}_${passenger.id}.${documentUrl.split('.').pop() || 'pdf'}`
+
+      // Set download attribute to force download
+      link.download = defaultFileName
+      link.target = '_blank'
+
+      // Trigger download
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+    } catch (error) {
+      console.error('Download error:', error)
+
+      // Fallback: try fetch method
+      try {
+        const response = await fetch(documentUrl, {
+          mode: 'cors',
+          headers: {
+            'Accept': '*/*',
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+
+        const defaultFileName = `${passenger.documentType || 'document'}_${passenger.id}.${documentUrl.split('.').pop() || 'pdf'}`
+        link.download = fileName || defaultFileName
+
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+      } catch (fetchError) {
+        console.error('Fetch download error:', fetchError)
+        setError('Failed to download document. Please try viewing the document instead.')
+      }
+    }
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      // In real app, would upload file to server
-      console.log('Uploading file:', file.name)
-      // Update passenger to show they now have documents
-      setPassenger(prev => ({ ...prev, hasDocuments: true }))
+    if (!file) return
+
+    // Clear previous messages
+    setError(null)
+    setUploadSuccess(null)
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+    if (file.size > maxSize) {
+      setError('File size must be less than 5MB')
+      return
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Only PDF, JPG, and PNG files are allowed')
+      return
+    }
+
+    try {
+      setUploading(true)
+
+      // Get user ID from JWT token
+      const jwtToken = localStorage.getItem('jwtToken')
+      if (!jwtToken) {
+        setError('Authentication token not found. Please login again.')
+        return
+      }
+
+      const userId = GetUserId(jwtToken)
+      if (!userId) {
+        setError('Unable to get user ID from token')
+        return
+      }
+
+      // Get passenger ID (remove 'P' prefix if present)
+      const currentPassengerId = passenger.id.replace('P', '')
+
+      console.log('Uploading file:', file.name, 'for user:', userId, 'passenger:', currentPassengerId)
+
+      const result = await uploadUserDocument(userId, currentPassengerId, file)
+
+      if (result.success) {
+        // Check if passport was successfully validated
+        if (result.data?.passportExtraction?.data.is_passport) {
+          setUploadSuccess('Passport document uploaded and validated successfully!')
+
+          // Update passenger to show they now have documents
+          setPassenger(prev => ({ ...prev, hasDocuments: true }))
+
+          // Reload passenger details immediately to get updated data
+          await fetchPassengerDetails()
+
+          // Clear success message after showing it briefly
+          setTimeout(() => {
+            setUploadSuccess(null)
+          }, 3000)
+        } else {
+          setUploadSuccess('Document uploaded successfully!')
+          // Update passenger to show they now have documents
+          setPassenger(prev => ({ ...prev, hasDocuments: true }))
+
+          // Reload passenger details after successful upload
+          setTimeout(() => {
+            fetchPassengerDetails()
+            setUploadSuccess(null)
+          }, 2000)
+        }
+      } else {
+        setError(result.message || 'Upload failed')
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+      setError('An unexpected error occurred during upload')
+    } finally {
+      setUploading(false)
+      // Clear the file input
+      event.target.value = ''
     }
   }
 
@@ -278,6 +425,19 @@ const PassengerDetails = () => {
             <div className="ml-3">
               <p className="text-sm text-red-700">
                 {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {uploadSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-green-700">
+                {uploadSuccess}
               </p>
             </div>
           </div>
@@ -553,30 +713,36 @@ const PassengerDetails = () => {
               {/* Document Preview Section */}
               {passenger.hasDocuments && (
                 <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1 mb-3">Document Preview</h4>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-gray-400" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {passenger.documentType || 'passport'}_document.pdf
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Document ID: {passenger.passengerFlightId} • Number: {passenger.passportNumber}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          View
-                        </Button>
+                  <label className="text-sm font-medium text-gray-700">Document Preview</label>
+                  <div className="mt-2 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                    <div className="flex items-center justify-center space-x-2">
+                      <FileText className="h-8 w-8 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {passenger.documentType || 'passport'}_document.pdf
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Document ID: {passenger.passengerFlightId}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Number: {passenger.passportNumber}
+                        </p>
                       </div>
                     </div>
+                    <div className="mt-2 flex justify-center space-x-2">
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        View
+                      </Button>
+                    </div>
+                    {!passenger.documentUrl && (
+                      <p className="text-xs text-gray-500 text-center mt-2">
+                        Document URL not available
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -595,9 +761,19 @@ const PassengerDetails = () => {
                   <Button
                     variant="outline"
                     onClick={() => document.getElementById('document-upload')?.click()}
+                    disabled={uploading}
                   >
-                    <Upload className="mr-2 h-4 w-4" />
-                    {passenger.hasDocuments ? 'Replace Document' : 'Upload Passport'}
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        {passenger.hasDocuments ? 'Replace Document' : 'Upload Passport'}
+                      </>
+                    )}
                   </Button>
                   <p className="text-sm text-gray-500">
                     Supported formats: PDF, JPG, PNG (Max 5MB)
