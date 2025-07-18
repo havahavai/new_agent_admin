@@ -104,6 +104,7 @@ export interface PassengerDocument4 {
   nationality: string;
   placeOfIssue: string;
   countryOfResidence: string;
+  documentUrl?: string;
 }
 
 export interface PassengerDetail {
@@ -136,6 +137,36 @@ export const getJwtToken = (): string => {
   const jwtToken = localStorage.getItem("jwtToken");
   return jwtToken || ""; // Default fallback as specified
 };
+
+// Upload Document Response
+export interface PassportExtractionData {
+  is_passport: boolean;
+  passport_number: string | null;
+  date_of_expiry: string | null;
+  nationality: string | null;
+  issue_date: string | null;
+  issue_place: string | null;
+}
+
+export interface PassportExtraction {
+  success: boolean;
+  message: string;
+  data: PassportExtractionData;
+}
+
+export interface UploadDocumentData {
+  url: string;
+  type: string;
+  originalName: string;
+  size: number;
+  passportExtraction: PassportExtraction;
+}
+
+export interface UploadDocumentResponse {
+  success: boolean;
+  message: string;
+  data?: UploadDocumentData;
+}
 
 // Base API URL
 export const BASE_API_URL = "https://prod-api.flyo.ai/core/v1";
