@@ -42,10 +42,11 @@ export interface PassengerDocument {
   number: string;
   expiry: string;
   issueDate: string;
-  country: string;
+  issueCountry: string;
 }
 
 export interface FlightPassenger {
+  passengerId: number;
   firstName: string;
   lastName: string;
   dateOfBirth: string;
@@ -116,6 +117,8 @@ export interface PassengerDetail {
   nationality: string;
   gender: string;
   countryOfResidence: string;
+  email?: string; // Optional field that might not be in API response
+  mobileNumber?: string; // Optional field that might not be in API response
   passengerDocuments: PassengerDocument4[];
   numberOfFlights: number;
   mainPassenger: boolean;
@@ -170,3 +173,82 @@ export interface UploadDocumentResponse {
 
 // Base API URL
 export const BASE_API_URL = "https://prod-api.flyo.ai/core/v1";
+
+// Update Passenger API Types
+export interface UpdatePassengerRequest {
+  type: "INDIVIDUAL_PASSENGER";
+  operationType: "UPDATE";
+  body: {
+    passengerId: string;
+    firstName?: string;
+    lastName?: string;
+    mobileNumber?: string;
+    email?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    nationality?: string;
+    countryOfResidence?: string;
+  };
+}
+
+export interface UpdatePassengerResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Add Passport API Types
+export interface AddPassportRequest {
+  type: "PASSENGERDOCUMENT";
+  operationType: "ADD";
+  body: {
+    passengerId: number;
+    documentType: "passport";
+    documentNumber: string;
+    dateOfIssue: string;
+    dateOfExpiry: string;
+    placeOfIssue: string;
+  };
+}
+
+export interface AddPassportResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Update Passport API Types
+export interface UpdatePassportRequest {
+  type: "PASSENGERDOCUMENT";
+  operationType: "UPDATE";
+  body: {
+    documentId: number;
+    documentType: "passport";
+    documentNumber: string;
+    dateOfIssue: string;
+    dateOfExpiry: string;
+    placeOfIssue: string;
+  };
+}
+
+export interface UpdatePassportResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Update Ticket API Types
+export interface UpdateTicketRequest {
+  type: "TICKET";
+  body: {
+    ticketId: number;
+    pnr?: string;
+    bookingReference?: string;
+  };
+}
+
+export interface UpdateTicketResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}

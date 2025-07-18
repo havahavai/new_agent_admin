@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { DatePicker } from '@/components/ui/date-picker'
 import { PhoneInputField } from '@/components/ui/phone-input'
+
+
+
 import {
   Select,
   SelectContent,
@@ -25,18 +28,14 @@ import {
   Users,
   FileText,
   Download,
-  Clock,
-  MapPin,
   User,
-  Mail,
-  Phone,
-  CreditCard,
+  Edit,
   Calendar
 } from 'lucide-react'
 import { getBookingDetails, type BookingDetails, type BookingPassenger, type BoardingPass } from '@/data/flights'
-import { BoardingPass as BoardingPassComponent } from '@/components/ui/boarding-pass'
 import { countries } from '@/data/countries'
-import { getFlightDataByIds, FlightDataByIdsResponse, ApiError } from '@/api'
+
+import { getFlightDataByIds, FlightDataByIdsResponse, ApiError, updateTicket } from '@/api'
 
 // Helper function to extract time from ISO string without timezone conversion
 const extractTimeFromISO = (isoString: string): string => {
@@ -92,6 +91,7 @@ const determineFlightStatus = (delayString: string, checkInStatus: string): 'On 
 const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): BookingDetails => {
   const passengers: BookingPassenger[] = apiData.passengers.map((passenger, index) => ({
     id: `passenger-${index}`,
+    passengerId: passenger.passengerId,
     name: `${passenger.firstName} ${passenger.lastName}`,
     email: passenger.email,
     phone: passenger.mobileNumber,
@@ -101,12 +101,12 @@ const convertApiToBookingDetails = (apiData: FlightDataByIdsResponse['data']): B
     isMainPassenger: index === 0,
     dateOfBirth: passenger.dateOfBirth || new Date().toISOString(),
     gender: (passenger.gender === 'Female' ? 'Female' : 'Male') as 'Male' | 'Female',
-    nationality: passenger.country || 'US',
+    nationality: passenger.country || '',
     passportNumber: passenger.documents[0]?.number || '',
     passportIssueDate: passenger.documents[0]?.issueDate || '',
     passportExpiry: passenger.documents[0]?.expiry || '',
-    passportIssuePlace: passenger.documents[0]?.country || '',
-    countryOfResidence: passenger.country || 'US',
+    passportIssuePlace: passenger.documents[0]?.issueCountry || '',
+    countryOfResidence: passenger.country || '',
     hasDocuments: passenger.documents.length > 0,
     specialRequests: [],
     boardingPass: passenger.boardingPassUrl ? {
@@ -229,6 +229,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
   )
 }
 
+
 // Gender selector component
 interface GenderSelectorProps {
   label: string
@@ -288,6 +289,7 @@ const ReadOnlyField: React.FC<ReadOnlyFieldProps> = ({
     </div>
   )
 }
+
 
 // Country selector component for nationality
 interface NationalitySelectorProps {
@@ -380,6 +382,20 @@ const TripDetails = () => {
   const [error, setError] = useState<string | null>(null)
   const [apiData, setApiData] = useState<FlightDataByIdsResponse['data'] | null>(null)
 
+  // State for tracking section changes and saving status
+  const [sectionChanges, setSectionChanges] = useState({
+    booking: false,
+    flight: false,
+    passengers: {} as Record<number, boolean>
+  })
+
+  const [sectionSaving, setSectionSaving] = useState({
+    booking: false,
+    flight: false,
+    passengers: {} as Record<number, boolean>
+  })
+
+
 
   // Track changes for individual sections
   const [sectionChanges, setSectionChanges] = useState<{
@@ -419,6 +435,8 @@ const TripDetails = () => {
 
           if ('success' in response && response.success) {
             const apiResponse = response as FlightDataByIdsResponse
+
+            // Store API data for reference
             setApiData(apiResponse.data)
 
             // Convert API data to BookingDetails format
@@ -488,8 +506,6 @@ const TripDetails = () => {
   const handleSectionSave = async (section: 'booking' | 'flight' | 'passenger', passengerIndex?: number) => {
     if (!bookingDetails) return
 
-    const sectionKey = section === 'passenger' && passengerIndex !== undefined ? `passengers.${passengerIndex}` : section
-
     if (section === 'passenger' && passengerIndex !== undefined) {
       setSectionSaving(prev => ({
         ...prev,
@@ -500,15 +516,39 @@ const TripDetails = () => {
     }
 
     try {
-      // Simulate API call - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 800))
+      if (section === 'booking') {
+        // Get ticketId from URL params or search params
+        const finalTicketId = ticketId || searchParams.get('ticketId')
 
-      // Here you would typically save specific section to backend
-      console.log(`Saving ${section} section:`, section === 'passenger' && passengerIndex !== undefined
-        ? bookingDetails.passengers[passengerIndex]
-        : section === 'booking'
-          ? { pnr: bookingDetails.pnr, bookingReference: bookingDetails.bookingReference, contactEmail: bookingDetails.contactEmail, contactPhone: bookingDetails.contactPhone }
+        if (finalTicketId) {
+          const result = await updateTicket(
+            parseInt(finalTicketId),
+            bookingDetails.pnr,
+            bookingDetails.bookingReference
+          )
+
+          if ('success' in result && result.success) {
+            console.log('Booking details updated successfully:', result)
+          } else {
+            throw new Error(result.message || 'Failed to update booking details')
+          }
+        } else {
+          // Fallback for cases without ticketId - just simulate
+          await new Promise(resolve => setTimeout(resolve, 800))
+          console.log('Saving booking section (no ticketId):', {
+            pnr: bookingDetails.pnr,
+            bookingReference: bookingDetails.bookingReference,
+            contactEmail: bookingDetails.contactEmail,
+            contactPhone: bookingDetails.contactPhone
+          })
+        }
+      } else {
+        // For other sections, simulate API call for now
+        await new Promise(resolve => setTimeout(resolve, 800))
+        console.log(`Saving ${section} section:`, section === 'passenger' && passengerIndex !== undefined
+          ? bookingDetails.passengers[passengerIndex]
           : bookingDetails.flight)
+      }
 
       // Clear section-specific changes
       if (section === 'passenger' && passengerIndex !== undefined) {
@@ -536,6 +576,31 @@ const TripDetails = () => {
   }
 
 
+  const handleCopyEmailToAll = (email: string) => {
+    if (!bookingDetails || !email) return
+
+    const updatedBooking = { ...bookingDetails }
+    updatedBooking.passengers = updatedBooking.passengers.map(passenger => ({
+      ...passenger,
+      email: email
+    }))
+
+    setBookingDetails(updatedBooking)
+    console.log('Email copied to all passengers:', email)
+  }
+
+  const handleCopyPhoneToAll = (phone: string) => {
+    if (!bookingDetails || !phone) return
+
+    const updatedBooking = { ...bookingDetails }
+    updatedBooking.passengers = updatedBooking.passengers.map(passenger => ({
+      ...passenger,
+      phone: phone
+    }))
+
+    setBookingDetails(updatedBooking)
+    console.log('Phone copied to all passengers:', phone)
+  }
 
   const handleDownloadActualBoardingPass = (boardingPassUrl: string, passengerName: string, flightNumber: string) => {
     // Download the actual boarding pass from the URL
@@ -1162,9 +1227,12 @@ const TripDetails = () => {
                   isRequired={true}
                   className="text-sm"
                 />
+              </div>
+              <div className="space-y-4">
                 <EditableField
                   label="Contact Email"
                   value={contactEmail}
+                  className="text-sm"
                   onChange={(value) => handleFieldChange('booking', 'contactEmail', value)}
                   type="email"
                   isRequired={true}
@@ -1173,9 +1241,9 @@ const TripDetails = () => {
                 <PhoneInputField
                   label="Contact Phone"
                   value={contactPhone}
-                  onChange={(value) => handleFieldChange('booking', 'contactPhone', value || '')}
-                  isRequired={true}
                   className="text-sm"
+                  onChange={(value) => handleFieldChange('booking', 'contactPhone', value)}
+                  type="tel"
                 />
               </div>
               {sectionChanges.booking && (
@@ -1284,6 +1352,17 @@ const TripDetails = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                        {passenger.passengerId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/passengers/P${passenger.passengerId}`)}
+                            className="flex items-center space-x-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span>Edit Details</span>
+                          </Button>
+                        )}
                         {passenger.boardingPass && (
                           <Button
                             size="sm"
@@ -1301,88 +1380,133 @@ const TripDetails = () => {
                     <div className="space-y-4">
                       <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Personal Information</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        <EditableField
+                        <ReadOnlyField
                           label="First Name"
                           value={passenger.name.split(' ')[0] || ''}
-                          onChange={(value) => {
-                            const lastName = passenger.name.split(' ').slice(1).join(' ') || ''
-                            const fullName = lastName ? `${value} ${lastName}` : value
-                            handleFieldChange('passenger', 'name', fullName, index)
-                          }}
                           className="text-sm"
-                          isRequired={true}
                         />
-                        <EditableField
+                        <ReadOnlyField
                           label="Last Name"
                           value={passenger.name.split(' ').slice(1).join(' ') || ''}
-                          onChange={(value) => {
-                            const firstName = passenger.name.split(' ')[0] || ''
-                            const fullName = firstName ? `${firstName} ${value}` : value
-                            handleFieldChange('passenger', 'name', fullName, index)
-                          }}
                           className="text-sm"
-                          isRequired={true}
                         />
-                        <EditableField
+                        <ReadOnlyField
                           label="Date of Birth"
                           value={new Date(passenger.dateOfBirth).toISOString().split('T')[0]}
-                          onChange={(value) => handleFieldChange('passenger', 'dateOfBirth', new Date(value).toISOString(), index)}
-                          type="date"
                           className="text-sm"
-                          isRequired={true}
                         />
-                        <GenderSelector
+                        <ReadOnlyField
                           label="Gender"
                           value={passenger.gender}
-                          onChange={(value) => handleFieldChange('passenger', 'gender', value, index)}
                           className="text-sm"
-                          isRequired={true}
                         />
-                        <NationalitySelector
+                        <ReadOnlyField
                           label="Country"
                           value={passenger.nationality}
-                          onChange={(value) => handleFieldChange('passenger', 'nationality', value, index)}
                           className="text-sm"
-                          isRequired={true}
                         />
-                        <EditableField
+                        <ReadOnlyField
                           label="Seat Number"
                           value={passenger.seatNumber || ''}
-                          onChange={(value) => handleFieldChange('passenger', 'seatNumber', value, index)}
                           className="text-sm"
                         />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Personal Information</h4>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <EditableField
+                              label="First Name"
+                              value={passenger.name.split(' ')[0] || ''}
+                              onChange={(value) => {
+                                const lastName = passenger.name.split(' ').slice(1).join(' ') || ''
+                                const fullName = lastName ? `${value} ${lastName}` : value
+                                handleFieldChange('passenger', 'name', fullName, index)
+                              }}
+                              className="text-sm"
+                            />
+                            <EditableField
+                              label="Last Name"
+                              value={passenger.name.split(' ').slice(1).join(' ') || ''}
+                              onChange={(value) => {
+                                const firstName = passenger.name.split(' ')[0] || ''
+                                const fullName = firstName ? `${firstName} ${value}` : value
+                                handleFieldChange('passenger', 'name', fullName, index)
+                              }}
+                              className="text-sm"
+                            />
+                          </div>
+                          <EditableField
+                            label="Date of Birth"
+                            value={new Date(passenger.dateOfBirth).toISOString().split('T')[0]}
+                            onChange={(value) => handleFieldChange('passenger', 'dateOfBirth', new Date(value).toISOString(), index)}
+                            type="date"
+                            className="text-sm"
+                          />
+                          <GenderSelector
+                            label="Gender"
+                            value={passenger.gender}
+                            onChange={(value) => handleFieldChange('passenger', 'gender', value, index)}
+                            className="text-sm"
+                          />
+                          <NationalitySelector
+                            label="Country"
+                            value={passenger.nationality}
+                            onChange={(value) => handleFieldChange('passenger', 'nationality', value, index)}
+                            className="text-sm"
+                          />
+                          <EditableFieldWithCopy
+                            label="Email"
+                            value={passenger.email || ''}
+                            onChange={(value) => handleFieldChange('passenger', 'email', value, index)}
+                            onCopyToAll={handleCopyEmailToAll}
+                            type="email"
+                            className="text-sm"
+                          />
+                          <EditableFieldWithCopy
+                            label="Phone"
+                            value={passenger.phone || ''}
+                            onChange={(value) => handleFieldChange('passenger', 'phone', value, index)}
+                            onCopyToAll={handleCopyPhoneToAll}
+                            type="tel"
+                            className="text-sm"
+                          />
+                          <EditableField
+                            label="Seat Number"
+                            value={passenger.seatNumber || ''}
+                            onChange={(value) => handleFieldChange('passenger', 'seatNumber', value, index)}
+                            className="text-sm"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-3">
                         <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1">Passport Details</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                          <EditableField
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                          <ReadOnlyField
                             label="Passport Number"
                             value={passenger.passportNumber}
-                            onChange={(value) => handleFieldChange('passenger', 'passportNumber', value, index)}
                             className="text-sm"
                             isRequired={true}
                           />
-                          <EditableField
+                          <ReadOnlyField
                             label="Issue Date"
                             value={passenger.passportIssueDate ? new Date(passenger.passportIssueDate).toISOString().split('T')[0] : ''}
-                            onChange={(value) => handleFieldChange('passenger', 'passportIssueDate', value ? new Date(value).toISOString() : '', index)}
-                            type="date"
                             className="text-sm"
                             isRequired={true}
                           />
-                          <EditableField
+                          <ReadOnlyField
                             label="Expiry Date"
                             value={passenger.passportExpiry ? new Date(passenger.passportExpiry).toISOString().split('T')[0] : ''}
-                            onChange={(value) => handleFieldChange('passenger', 'passportExpiry', value ? new Date(value).toISOString() : '', index)}
-                            type="date"
                             className="text-sm"
                             isRequired={true}
                           />
-                          <CountrySelector
+                          <ReadOnlyField
                             label="Issue Country"
                             value={passenger.passportIssuePlace}
-                            onChange={(value) => handleFieldChange('passenger', 'passportIssuePlace', value, index)}
                             className="text-sm"
                             isRequired={true}
                           />
@@ -1417,18 +1541,7 @@ const TripDetails = () => {
                       </div>
                     )}
 
-                    {/* Save Button */}
-                    {sectionChanges.passengers[index] && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
-                        <Button
-                          onClick={() => handleSectionSave('passenger', index)}
-                          disabled={sectionSaving.passengers[index]}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          {sectionSaving.passengers[index] ? 'Saving...' : 'Save Passenger Info'}
-                        </Button>
-                      </div>
-                    )}
+
                   </CardContent>
                 </Card>
               ))}
