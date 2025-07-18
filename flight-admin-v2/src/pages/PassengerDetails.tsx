@@ -14,12 +14,21 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   ArrowLeft,
   User,
   FileText,
   Upload,
   Download,
-  Settings
+  Settings,
+  AlertTriangle
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
@@ -38,6 +47,7 @@ const PassengerDetails = () => {
   const [apiPassengers, setApiPassengers] = useState<PassengerDetail[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+  const [showInvalidDocumentDialog, setShowInvalidDocumentDialog] = useState(false)
 
   // Get passenger data from navigation state if available
   const navigationPassengerData = location.state?.passengerData as PassengerDetail | undefined
@@ -368,7 +378,11 @@ const PassengerDetails = () => {
 
       if (result.success) {
         // Check if passport was successfully validated
-        if (result.data?.passportExtraction?.data.is_passport) {
+        if (result.data?.passportExtraction?.data.is_passport === false) {
+          // Show popup for invalid document (not a passport)
+          setShowInvalidDocumentDialog(true)
+        } else if (result.data?.passportExtraction?.data.is_passport === true) {
+          // Valid passport - show success message and refresh data
           setUploadSuccess('Passport document uploaded and validated successfully!')
 
           // Update passenger to show they now have documents
@@ -382,6 +396,7 @@ const PassengerDetails = () => {
             setUploadSuccess(null)
           }, 3000)
         } else {
+          // Fallback for cases where is_passport is not explicitly true/false
           setUploadSuccess('Document uploaded successfully!')
           // Update passenger to show they now have documents
           setPassenger(prev => ({ ...prev, hasDocuments: true }))
@@ -801,6 +816,34 @@ const PassengerDetails = () => {
       </Accordion>
         </>
       )}
+
+      {/* Invalid Document Dialog */}
+      <Dialog open={showInvalidDocumentDialog} onOpenChange={setShowInvalidDocumentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Invalid Document
+            </DialogTitle>
+            <DialogDescription>
+              This document doesn't appear to be a valid passport. Please upload a valid passport document.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center my-4">
+            <div className="p-4 bg-amber-50 rounded-full">
+              <AlertTriangle className="h-12 w-12 text-amber-500" />
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-center">
+            <Button
+              variant="default"
+              onClick={() => setShowInvalidDocumentDialog(false)}
+            >
+              Try Again
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

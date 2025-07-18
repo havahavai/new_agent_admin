@@ -53,15 +53,7 @@ export const uploadUserDocument = async (
 
     const data: UploadDocumentData = await response.json();
 
-    // Check if the uploaded document is a passport
-    if (data.passportExtraction && !data.passportExtraction.data.is_passport) {
-      return {
-        success: false,
-        message:
-          "This document is not a passport. Please upload a valid passport document.",
-      };
-    }
-
+    // Always return success with the data, let the UI handle passport validation
     return {
       success: true,
       message: data.passportExtraction?.data.is_passport

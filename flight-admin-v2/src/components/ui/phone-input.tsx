@@ -24,6 +24,12 @@ export function PhoneInputField({
 }: PhoneInputFieldProps) {
   const isEmpty = isRequired && (!value || value.trim() === '')
 
+  const handleChange = (phoneValue?: string) => {
+    if (onChange) {
+      onChange(phoneValue || undefined)
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       {label && (
@@ -35,7 +41,7 @@ export function PhoneInputField({
       <div className="mt-1">
         <PhoneInput
           value={value}
-          onChange={onChange}
+          onChange={handleChange}
           placeholder={placeholder}
           disabled={disabled}
           defaultCountry="US"
