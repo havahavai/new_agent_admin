@@ -13,7 +13,7 @@ export const getUserSpecificInfo = async (
   try {
     const jwtToken = getJwtToken();
     const userId = GetUserId(jwtToken);
-    const url = `${BASE_API_URL}/admin/getUserSpecificInfo?userId=${userId}`;
+    const url = `${BASE_API_URL}/admin/getUserSpecificInfo?userId=${userId}&type=flightData&timeframe=upcoming`;
 
     const response = await fetch(url, {
       method: "GET",
