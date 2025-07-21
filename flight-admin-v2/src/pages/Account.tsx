@@ -11,11 +11,11 @@ const Account = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userInfo, setUserInfo] = useState({
-    companyName: 'Explera Vacations',
-    firstName: 'User',
-    lastName: 'Name',
-    mobileNumber: '919737332299',
-    emails: ['explera.surat@gmail.com'],
+    companyName: '',
+    firstName: '',
+    lastName: '',
+    mobileNumber: '',
+    emails: [''],
     checkInPreference: undefined as any
   })
 

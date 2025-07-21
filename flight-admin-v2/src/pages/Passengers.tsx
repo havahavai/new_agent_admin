@@ -65,7 +65,7 @@ const Passengers = () => {
       email: 'N/A', // API doesn't provide email
       flightNumber: `FL${passenger.passengerFlightId}`, // Use passengerFlightId
       seatNumber: 'N/A', // API doesn't provide seat number
-      ticketClass: 'Economy', // Default
+      ticketClass: '', // Default
 
       hasDocuments: passenger.passengerDocuments.length > 0,
       phone: 'N/A', // API doesn't provide phone

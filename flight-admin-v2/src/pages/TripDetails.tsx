@@ -110,7 +110,7 @@ const convertApiToBookingDetails = (
       email: passenger.email,
       phone: passenger.mobileNumber,
       seatNumber: passenger.seatNumber || "",
-      ticketClass: apiData.flightClass, // Default since not provided in API
+      ticketClass: apiData.flightClass,
       status:
         apiData.checkInStatus === "FAILED"
           ? "Pending"
