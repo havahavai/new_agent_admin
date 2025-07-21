@@ -1,5 +1,10 @@
 import { API_BASE_URL } from "./utils";
-import { isUserTypeAllowed, getUnauthorizedMessage } from "../config/auth";
+import {
+  isUserTypeAllowed,
+  getUnauthorizedMessage,
+  validateEmailPassword,
+  getCredentialErrorMessage,
+} from "../config/auth";
 
 export interface LoginRequest {
   accessToken: string;
@@ -91,10 +96,23 @@ export const loginWithEmailPassword = async (
   credentials: SpecialUserLoginRequest
 ): Promise<LoginResponse> => {
   try {
+    // First validate credentials against environment configuration
+    const isValidCredentials = validateEmailPassword(
+      credentials.email,
+      credentials.password
+    );
+
+    if (!isValidCredentials) {
+      console.log("Credential validation failed for email:", credentials.email);
+      throw new Error(getCredentialErrorMessage());
+    }
+
+    console.log("Credentials validated successfully, proceeding with API call");
     console.log("Special user login request:", {
       email: credentials.email,
       role: credentials.role,
     });
+
     const response = await fetch(
       `https://prod-api.flyo.ai/core/v1/admin/specialUserAuth`,
       {
