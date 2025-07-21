@@ -1,7 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Wallet, Plus, LogOut, User, Phone, Mail } from 'lucide-react'
+import { Wallet, User, Phone, Mail } from 'lucide-react'
 import { useState, useEffect } from 'react'
 // import SeatPreferenceWidgetSimple from '@/components/SeatPreferenceWidgetSimple'
 import SimpleSeatWidget from '@/components/SimpleSeatWidget'
@@ -10,7 +8,6 @@ import { logout } from '../api/auth'
 
 const Account = () => {
   const [balance, setBalance] = useState(1250.75)
-  const [addAmount, setAddAmount] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userInfo, setUserInfo] = useState({
@@ -57,13 +54,7 @@ const Account = () => {
     fetchUserInfo()
   }, [])
 
-  const handleAddBalance = () => {
-    const amount = parseFloat(addAmount)
-    if (amount > 0) {
-      setBalance(prev => prev + amount)
-      setAddAmount('')
-    }
-  }
+
 
   const handleLogout = () => {
     logout();
@@ -164,29 +155,7 @@ const Account = () => {
               <div className="text-2xl sm:text-3xl font-bold">₹{balance.toFixed(2)}</div>
               <p className="text-blue-100 text-sm">Available for bookings</p>
             </div>
-            <div className="flex flex-col space-y-2 sm:items-end">
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Input
-                  type="number"
-                  placeholder="Amount"
-                  value={addAmount}
-                  onChange={(e) => setAddAmount(e.target.value)}
-                  className="w-full sm:w-24 bg-white text-gray-900 text-sm"
-                  min="0"
-                  step="0.01"
-                />
-                <Button
-                  onClick={handleAddBalance}
-                  variant="secondary"
-                  size="sm"
-                  disabled={!addAmount || parseFloat(addAmount) <= 0}
-                  className="w-full sm:w-auto whitespace-nowrap"
-                >
-                  <Plus className="h-4 w-4 mr-1 flex-shrink-0" />
-                  Add Balance
-                </Button>
-              </div>
-            </div>
+
           </div>
         </CardContent>
       </Card>

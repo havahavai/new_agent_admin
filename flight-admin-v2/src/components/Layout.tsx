@@ -78,7 +78,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col">
           <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
             <div className="flex h-16 items-center px-4">
-              <h1 className="text-xl font-bold text-gray-900">Flight Admin</h1>
+              <h1 className="text-xl font-bold text-gray-900">Flyo Business Admin</h1>
             </div>
             <nav className="flex-1 space-y-1 px-2 py-4">
               {navigation.map((item) => {
@@ -123,7 +123,7 @@ const Layout = ({ children }: LayoutProps) => {
         }`}>
           <div className="flex flex-1 items-center justify-between min-w-0">
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Flight Admin</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Flyo Business Admin</h1>
             </div>
             <div className="flex items-center ml-4 space-x-4">
               <div className="text-sm font-medium text-gray-900 truncate">Admin User</div>
