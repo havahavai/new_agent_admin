@@ -22,6 +22,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     };
 
     checkAuth();
+
+    // Add console log for debugging
+    console.log('AuthGuard: Authentication check completed');
   }, []);
 
   // Show loading while checking authentication

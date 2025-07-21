@@ -28,6 +28,11 @@ const Layout = ({ children }: LayoutProps) => {
     { name: 'Account', href: '/account', icon: User },
   ]
 
+  // Log navigation for debugging
+  useEffect(() => {
+    console.log('Layout: Current path:', location.pathname)
+  }, [location.pathname])
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024)
@@ -52,6 +57,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <Link
                   key={item.name}
                   to={item.href}
+                  onClick={() => console.log(`Navigating to: ${item.href}`)}
                   className={`flex flex-col items-center py-2 px-2 rounded-lg transition-colors min-w-0 flex-1 ${
                     isActive
                       ? 'text-blue-600 bg-blue-50'
@@ -81,6 +87,7 @@ const Layout = ({ children }: LayoutProps) => {
                   <Link
                     key={item.name}
                     to={item.href}
+                    onClick={() => console.log(`Desktop: Navigating to: ${item.href}`)}
                     className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                       location.pathname === item.href
                         ? 'bg-blue-100 text-blue-900'

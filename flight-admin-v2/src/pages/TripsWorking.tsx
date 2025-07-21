@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FlightList } from '@/components/ui/flight-list'
 import { getUserSpecificInfo, FlightData, UserSpecificInfoResponse, ApiError } from '@/api'
 import { getDateCarouselDataForApi, findFirstDateWithFlights } from '@/data/flights'
@@ -148,6 +149,7 @@ const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect, onLoadNext }: a
 
 
 const TripsWorking = () => {
+  const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [carouselStartDate] = useState(new Date()) // Track the start date for carousel
   const [carouselDays, setCarouselDays] = useState(30) // Track how many days to show
@@ -176,7 +178,7 @@ const TripsWorking = () => {
           const carouselData = getDateCarouselDataForApi(userResponse.data.flightsData, { days: carouselDays, startDate: carouselStartDate })
           setDateCarouselData(carouselData)
 
-          // Set initial date to first date with flights
+          // Set initial date to first date with flights or today if no flights
           const firstDateWithFlights = findFirstDateWithFlights(carouselData)
           setSelectedDate(firstDateWithFlights)
         } else {
@@ -186,6 +188,8 @@ const TripsWorking = () => {
           // Still show date carousel even if API fails - show today + current days range
           const carouselData = getDateCarouselDataForApi([], { days: carouselDays, startDate: carouselStartDate })
           setDateCarouselData(carouselData)
+          // Set selected date to today when no flights
+          setSelectedDate(new Date())
         }
       } catch (err) {
         console.error('Error fetching flights:', err)
@@ -194,12 +198,24 @@ const TripsWorking = () => {
         // Still show date carousel even on error - show today + current days range
         const carouselData = getDateCarouselDataForApi([], { days: carouselDays, startDate: carouselStartDate })
         setDateCarouselData(carouselData)
+        // Set selected date to today when no flights
+        setSelectedDate(new Date())
       } finally {
-        setLoading(false)
+        // Add a small delay to ensure state updates are processed
+        setTimeout(() => {
+          setLoading(false)
+          console.log('Loading state set to false')
+        }, 100)
       }
     }
 
     fetchFlights()
+
+    // Log component mount/unmount for debugging
+    console.log('TripsWorking component mounted')
+    return () => {
+      console.log('TripsWorking component unmounted')
+    }
   }, [])
 
   // Update carousel data when carouselDays changes
@@ -213,10 +229,13 @@ const TripsWorking = () => {
       if (currentSelectedData && !currentSelectedData.hasFlights) {
         // Current selection has no flights, try to find a better date
         const firstDateWithFlights = findFirstDateWithFlights(carouselData)
-        setSelectedDate(firstDateWithFlights)
+        // Only update if the new date is different to avoid infinite loops
+        if (firstDateWithFlights.toDateString() !== selectedDate.toDateString()) {
+          setSelectedDate(firstDateWithFlights)
+        }
       }
     }
-  }, [carouselDays, apiFlights, carouselStartDate, selectedDate])
+  }, [carouselDays, apiFlights, carouselStartDate])
 
   useEffect(() => {
     if (apiFlights.length > 0) {
@@ -237,7 +256,9 @@ const TripsWorking = () => {
     setCarouselDays(prevDays => prevDays + 30)
   }
 
-  if (loading) {
+  // Only show loading screen for initial load, not for subsequent data fetches
+  // This ensures navigation still works even during loading
+  if (loading && dateCarouselData.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -284,6 +305,21 @@ const TripsWorking = () => {
             </div>
             <p className="text-gray-600 text-lg">No flight data available</p>
             <p className="text-gray-500 text-sm">Please check your connection and try again</p>
+            <p className="text-gray-500 mt-4">You can still navigate to other sections using the menu.</p>
+            <div className="mt-4 space-x-2">
+              <button
+                onClick={() => navigate('/passengers')}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Test Navigate to Passengers
+              </button>
+              <button
+                onClick={() => navigate('/account')}
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              >
+                Test Navigate to Account
+              </button>
+            </div>
           </div>
         ) : (
           <FlightList
