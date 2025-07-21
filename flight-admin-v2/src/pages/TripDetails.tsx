@@ -322,11 +322,15 @@ const ReadOnlyField: React.FC<ReadOnlyFieldProps> = ({
   value,
   className = "",
 }) => {
+  const hasValue = value && value.trim() !== "";
+
   return (
     <div className={className}>
       <label className="text-sm font-medium text-gray-700">{label}</label>
-      <div className="mt-1 px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-sm text-gray-900">
-        {value}
+      <div className={`mt-1 px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-sm ${
+        hasValue ? 'text-gray-900' : 'text-gray-400'
+      }`}>
+        {hasValue ? value : 'No data'}
       </div>
     </div>
   );

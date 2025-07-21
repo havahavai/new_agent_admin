@@ -213,7 +213,7 @@ const Login: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Flight Admin</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Flyo Business Admin</h1>
           <p className="text-gray-600">Welcome back! Please sign in to continue.</p>
         </div>
 

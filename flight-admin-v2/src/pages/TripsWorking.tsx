@@ -256,9 +256,8 @@ const TripsWorking = () => {
     setCarouselDays(prevDays => prevDays + 30)
   }
 
-  // Only show loading screen for initial load, not for subsequent data fetches
-  // This ensures navigation still works even during loading
-  if (loading && dateCarouselData.length === 0) {
+  // Show loading screen for initial load
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
