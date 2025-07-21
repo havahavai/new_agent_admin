@@ -10,6 +10,12 @@ import {
   Users,
   Check
 } from 'lucide-react'
+import {
+  updateUserCheckinPreference,
+  updatePassengerCheckinPreference,
+  GetUserId,
+  getJwtToken
+} from '@/api'
 
 // Import SVG assets for aircraft sections
 import selectedFront from '@/assets/selected_front.svg'
@@ -37,12 +43,18 @@ const SimplifiedSeatSelection: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const passengerCount = parseInt(searchParams.get('passengers') || '1')
+  const context = searchParams.get('context') || 'user' // 'user' or 'passenger'
+  const passengerId = searchParams.get('passengerId')
 
   const [preference, setPreference] = useState<SeatPreference>({
     sections: [],
     position: null,
     arrangement: null
   })
+
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   const handleSectionSelect = (section: 'front' | 'middle' | 'back') => {
     setPreference(prev => {
@@ -124,13 +136,78 @@ const SimplifiedSeatSelection: React.FC = () => {
     return descriptions[arrangement] || ''
   }
 
-  const handleSave = () => {
-    console.log('Saving preference:', preference)
-    navigate('/account')
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      setError(null)
+      setSuccess(null)
+
+      // Convert preference to API format
+      const seatPosition = preference.position || preference.arrangement || 'ANY'
+      const rowPosition = preference.sections.length > 0 ? preference.sections.join(',') : 'ANY'
+
+      // Build preferences object with correct field mapping based on passenger count
+      const preferences: any = {}
+
+      // Map to the correct numbered fields based on passenger count
+      if (passengerCount === 1) {
+        // For 1 passenger, use base fields (no suffix)
+        preferences.seatPosition = seatPosition
+        preferences.rowPosition = rowPosition
+      } else {
+        // For 2-5 passengers, use numbered fields (seatPosition2, rowPosition2, etc.)
+        const suffix = passengerCount.toString()
+        preferences[`seatPosition${suffix}`] = seatPosition
+        preferences[`rowPosition${suffix}`] = rowPosition
+      }
+
+      if (context === 'passenger' && passengerId) {
+        // Save passenger-level preferences
+        const result = await updatePassengerCheckinPreference(passengerId, preferences)
+
+        if ('success' in result && result.success) {
+          setSuccess('Passenger seat preferences saved successfully!')
+          setTimeout(() => {
+            navigate(`/passengers/${passengerId}`)
+          }, 1500)
+        } else {
+          setError(result.message || 'Failed to save passenger preferences')
+        }
+      } else {
+        // Save user-level preferences
+        const jwtToken = getJwtToken()
+        const userId = GetUserId(jwtToken)
+
+        if (!userId) {
+          setError('Unable to get user ID. Please login again.')
+          return
+        }
+
+        const result = await updateUserCheckinPreference(userId.toString(), preferences)
+
+        if ('success' in result && result.success) {
+          setSuccess('User seat preferences saved successfully!')
+          setTimeout(() => {
+            navigate('/account')
+          }, 1500)
+        } else {
+          setError(result.message || 'Failed to save user preferences')
+        }
+      }
+    } catch (err) {
+      console.error('Error saving preferences:', err)
+      setError('An unexpected error occurred while saving preferences')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleBack = () => {
-    navigate('/account')
+    if (context === 'passenger' && passengerId) {
+      navigate(`/passengers/${passengerId}`)
+    } else {
+      navigate('/account')
+    }
   }
 
   return (
@@ -148,6 +225,28 @@ const SimplifiedSeatSelection: React.FC = () => {
               <span className="text-sm">Back</span>
             </Button>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-md p-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <p className="text-sm text-green-700">{success}</p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="text-center">
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
               Choose Your Seat Preference
@@ -155,6 +254,9 @@ const SimplifiedSeatSelection: React.FC = () => {
             <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
               <Users className="h-4 w-4" />
               <span>{passengerCount} passenger{passengerCount > 1 ? 's' : ''}</span>
+              {context === 'passenger' && passengerId && (
+                <span className="text-blue-600">• Passenger {passengerId}</span>
+              )}
             </div>
           </div>
         </div>
@@ -358,9 +460,17 @@ const SimplifiedSeatSelection: React.FC = () => {
             <div className="flex justify-center pt-4">
               <Button
                 onClick={handleSave}
+                disabled={saving}
                 className="w-full md:w-auto px-8 py-3"
               >
-                Save Seat Preference
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Seat Preference'
+                )}
               </Button>
             </div>
           )}

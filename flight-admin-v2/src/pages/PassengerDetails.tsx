@@ -89,7 +89,8 @@ const PassengerDetails = () => {
     mainPassenger: false,
     passengerFlightId: 0,
     documentType: '',
-    documentUrl: ''
+    documentUrl: '',
+    seatPreferences: undefined as any
   })
 
   // Function to fetch passenger details from API
@@ -130,7 +131,8 @@ const PassengerDetails = () => {
               mainPassenger: passengerData.mainPassenger,
               passengerFlightId: passengerData.passengerFlightId,
               documentType: document?.documentType || '',
-              documentUrl: document?.documentUrl || ''
+              documentUrl: document?.documentUrl || '',
+              seatPreferences: passengerData.seatPreferences
             })
             setLoading(false)
             return
@@ -1007,7 +1009,7 @@ const PassengerDetails = () => {
           </AccordionTrigger>
           <AccordionContent>
             <div className="pt-4">
-              <SimpleSeatWidget />
+              <SimpleSeatWidget checkInPreference={passenger.seatPreferences} />
             </div>
           </AccordionContent>
         </AccordionItem>

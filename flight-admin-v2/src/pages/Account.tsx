@@ -18,7 +18,8 @@ const Account = () => {
     firstName: 'User',
     lastName: 'Name',
     mobileNumber: '919737332299',
-    emails: ['explera.surat@gmail.com']
+    emails: ['explera.surat@gmail.com'],
+    checkInPreference: undefined as any
   })
 
   useEffect(() => {
@@ -35,7 +36,8 @@ const Account = () => {
             firstName: userResponse.data.firstName,
             lastName: userResponse.data.lastName,
             mobileNumber: userResponse.data.mobileNumber,
-            emails: userResponse.data.emails
+            emails: userResponse.data.emails,
+            checkInPreference: userResponse.data.checkInPreference
           })
           setBalance(parseFloat(userResponse.data.currentBalance))
         } else {
@@ -190,7 +192,7 @@ const Account = () => {
       </Card>
 
 
-      <SimpleSeatWidget />
+      <SimpleSeatWidget checkInPreference={userInfo.checkInPreference} />
     </div>
   )
 }

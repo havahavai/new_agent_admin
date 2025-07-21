@@ -79,17 +79,33 @@ export interface FlightDataByIdsResponse {
   };
 }
 
+// Check-in Preference interface
+export interface CheckInPreference {
+  seatPosition?: string;
+  rowPosition?: string;
+  seatPosition2?: string;
+  rowPosition2?: string;
+  seatPosition3?: string;
+  rowPosition3?: string;
+  seatPosition4?: string;
+  rowPosition4?: string;
+  seatPosition5?: string;
+  rowPosition5?: string;
+}
+
 // API 3: B2B User Response
 export interface B2BUserResponse {
   success: boolean;
   message: string;
   data: {
+    userId: string;
     currentBalance: string;
     companyName: string;
     firstName: string;
     lastName: string;
     mobileNumber: string;
     emails: string[];
+    checkInPreference?: CheckInPreference;
   };
 }
 
@@ -122,6 +138,7 @@ export interface PassengerDetail {
   passengerDocuments: PassengerDocument4[];
   numberOfFlights: number;
   mainPassenger: boolean;
+  seatPreferences?: CheckInPreference; // Seat preferences for the passenger
 }
 
 export interface PassengerDetailsResponse {
@@ -169,6 +186,56 @@ export interface UploadDocumentResponse {
   success: boolean;
   message: string;
   data?: UploadDocumentData;
+}
+
+// User Check-in Preference API Types
+export interface UserCheckinPreferenceRequest {
+  type: "USER_CHECKIN_PREFERENCE";
+  operationType: "ADD";
+  body: {
+    userId: string;
+    seatPosition?: string;
+    rowPosition?: string;
+    seatPosition2?: string;
+    rowPosition2?: string;
+    seatPosition3?: string;
+    rowPosition3?: string;
+    seatPosition4?: string;
+    rowPosition4?: string;
+    seatPosition5?: string;
+    rowPosition5?: string;
+  };
+}
+
+export interface UserCheckinPreferenceResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Passenger Check-in Preference API Types
+export interface PassengerCheckinPreferenceRequest {
+  type: "PASSENGER_CHECKIN_PREFERENCE";
+  operationType: "ADD";
+  body: {
+    passengerId: string;
+    seatPosition?: string;
+    rowPosition?: string;
+    seatPosition2?: string;
+    rowPosition2?: string;
+    seatPosition3?: string;
+    rowPosition3?: string;
+    seatPosition4?: string;
+    rowPosition4?: string;
+    seatPosition5?: string;
+    rowPosition5?: string;
+  };
+}
+
+export interface PassengerCheckinPreferenceResponse {
+  success: boolean;
+  message: string;
+  data?: any;
 }
 
 // Base API URL
