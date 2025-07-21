@@ -18,6 +18,21 @@ export interface AuthTokens {
   idToken: string;
 }
 
+export interface SpecialUserLoginRequest {
+  email: string;
+  password: string;
+  role: string;
+}
+
+export interface SpecialUserLoginResponse {
+  success: boolean;
+  data: {
+    jwtToken: string;
+    userType: string;
+  };
+  message: string;
+}
+
 /**
  * Login with Google OAuth tokens
  */
@@ -65,6 +80,58 @@ export const loginWithGoogle = async (
     return data;
   } catch (error) {
     console.error("Login API error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Login with email and password for special users
+ */
+export const loginWithEmailPassword = async (
+  credentials: SpecialUserLoginRequest
+): Promise<LoginResponse> => {
+  try {
+    console.log("Special user login request:", {
+      email: credentials.email,
+      role: credentials.role,
+    });
+    const response = await fetch(
+      `https://prod-api.flyo.ai/core/v1/admin/specialUserAuth`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+          role: credentials.role,
+        }),
+      }
+    );
+
+    const data: SpecialUserLoginResponse = await response.json();
+
+    if (!response.ok || !data.success) {
+      // Return the access denied message for unauthorized users
+      throw new Error(getUnauthorizedMessage());
+    }
+
+    if (!data.data.jwtToken) {
+      throw new Error("JWT token not received from login API");
+    }
+
+    // Validate user type if provided
+    if (data.data.userType && !isUserTypeAllowed(data.data.userType)) {
+      throw new Error(getUnauthorizedMessage(data.data.userType));
+    }
+
+    return {
+      jwtToken: data.data.jwtToken,
+      userType: data.data.userType,
+    };
+  } catch (error) {
+    console.error("Special user login API error:", error);
     throw error;
   }
 };

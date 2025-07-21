@@ -42,10 +42,11 @@ export interface PassengerDocument {
   number: string;
   expiry: string;
   issueDate: string;
-  country: string;
+  issueCountry: string;
 }
 
 export interface FlightPassenger {
+  passengerId: number;
   firstName: string;
   lastName: string;
   dateOfBirth: string;
@@ -78,17 +79,33 @@ export interface FlightDataByIdsResponse {
   };
 }
 
+// Check-in Preference interface
+export interface CheckInPreference {
+  seatPosition?: string;
+  rowPosition?: string;
+  seatPosition2?: string;
+  rowPosition2?: string;
+  seatPosition3?: string;
+  rowPosition3?: string;
+  seatPosition4?: string;
+  rowPosition4?: string;
+  seatPosition5?: string;
+  rowPosition5?: string;
+}
+
 // API 3: B2B User Response
 export interface B2BUserResponse {
   success: boolean;
   message: string;
   data: {
+    userId: string;
     currentBalance: string;
     companyName: string;
     firstName: string;
     lastName: string;
     mobileNumber: string;
     emails: string[];
+    checkInPreference?: CheckInPreference;
   };
 }
 
@@ -116,9 +133,12 @@ export interface PassengerDetail {
   nationality: string;
   gender: string;
   countryOfResidence: string;
+  email?: string; // Optional field that might not be in API response
+  mobileNumber?: string; // Optional field that might not be in API response
   passengerDocuments: PassengerDocument4[];
   numberOfFlights: number;
   mainPassenger: boolean;
+  seatPreferences?: CheckInPreference; // Seat preferences for the passenger
 }
 
 export interface PassengerDetailsResponse {
@@ -168,5 +188,134 @@ export interface UploadDocumentResponse {
   data?: UploadDocumentData;
 }
 
+// User Check-in Preference API Types
+export interface UserCheckinPreferenceRequest {
+  type: "USER_CHECKIN_PREFERENCE";
+  operationType: "ADD";
+  body: {
+    userId: string;
+    seatPosition?: string;
+    rowPosition?: string;
+    seatPosition2?: string;
+    rowPosition2?: string;
+    seatPosition3?: string;
+    rowPosition3?: string;
+    seatPosition4?: string;
+    rowPosition4?: string;
+    seatPosition5?: string;
+    rowPosition5?: string;
+  };
+}
+
+export interface UserCheckinPreferenceResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Passenger Check-in Preference API Types
+export interface PassengerCheckinPreferenceRequest {
+  type: "PASSENGER_CHECKIN_PREFERENCE";
+  operationType: "ADD";
+  body: {
+    passengerId: string;
+    seatPosition?: string;
+    rowPosition?: string;
+    seatPosition2?: string;
+    rowPosition2?: string;
+    seatPosition3?: string;
+    rowPosition3?: string;
+    seatPosition4?: string;
+    rowPosition4?: string;
+    seatPosition5?: string;
+    rowPosition5?: string;
+  };
+}
+
+export interface PassengerCheckinPreferenceResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
 // Base API URL
 export const BASE_API_URL = "https://prod-api.flyo.ai/core/v1";
+
+// Update Passenger API Types
+export interface UpdatePassengerRequest {
+  type: "INDIVIDUAL_PASSENGER";
+  operationType: "UPDATE";
+  body: {
+    passengerId: string;
+    firstName?: string;
+    lastName?: string;
+    mobileNumber?: string;
+    email?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    nationality?: string;
+    countryOfResidence?: string;
+  };
+}
+
+export interface UpdatePassengerResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Add Passport API Types
+export interface AddPassportRequest {
+  type: "PASSENGERDOCUMENT";
+  operationType: "ADD";
+  body: {
+    passengerId: number;
+    documentType: "passport";
+    documentNumber: string;
+    dateOfIssue: string;
+    dateOfExpiry: string;
+    placeOfIssue: string;
+  };
+}
+
+export interface AddPassportResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Update Passport API Types
+export interface UpdatePassportRequest {
+  type: "PASSENGERDOCUMENT";
+  operationType: "UPDATE";
+  body: {
+    documentId: number;
+    documentType: "passport";
+    documentNumber: string;
+    dateOfIssue: string;
+    dateOfExpiry: string;
+    placeOfIssue: string;
+  };
+}
+
+export interface UpdatePassportResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Update Ticket API Types
+export interface UpdateTicketRequest {
+  type: "TICKET";
+  body: {
+    ticketId: number;
+    pnr?: string;
+    bookingReference?: string;
+  };
+}
+
+export interface UpdateTicketResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
