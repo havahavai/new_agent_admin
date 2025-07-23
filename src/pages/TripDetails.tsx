@@ -99,6 +99,18 @@ const determineFlightStatus = (
   }
 };
 
+// Helper function to safely format date strings
+const formatDateString = (dateString: string | undefined | null): string => {
+  if (!dateString || dateString.trim() === "") {
+    return "";
+  }
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toISOString().split("T")[0];
+};
+
 // Helper function to convert API response to BookingDetails format
 const convertApiToBookingDetails = (
   apiData: FlightDataByIdsResponse["data"]
@@ -237,12 +249,13 @@ const EditableField: React.FC<EditableFieldProps> = ({
 
   if (type === "date") {
     const dateValue = value ? new Date(value) : undefined;
+    const isValidDate = dateValue && !isNaN(dateValue.getTime());
 
     return (
       <div className={className}>
         <Input
           type="date"
-          value={dateValue ? dateValue.toISOString().split("T")[0] : ""}
+          value={isValidDate ? dateValue.toISOString().split("T")[0] : ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Select date"
           required={isRequired}
@@ -1543,11 +1556,7 @@ const TripDetails = () => {
                         />
                         <ReadOnlyField
                           label="Date of Birth"
-                          value={
-                            new Date(passenger.dateOfBirth)
-                              .toISOString()
-                              .split("T")[0]
-                          }
+                          value={formatDateString(passenger.dateOfBirth)}
                           className="text-sm"
                         />
                         <ReadOnlyField
@@ -1581,24 +1590,12 @@ const TripDetails = () => {
                         />
                         <ReadOnlyField
                           label="Issue Date"
-                          value={
-                            passenger.passportIssueDate
-                              ? new Date(passenger.passportIssueDate)
-                                  .toISOString()
-                                  .split("T")[0]
-                              : ""
-                          }
+                          value={formatDateString(passenger.passportIssueDate)}
                           className="text-sm"
                         />
                         <ReadOnlyField
                           label="Expiry Date"
-                          value={
-                            passenger.passportExpiry
-                              ? new Date(passenger.passportExpiry)
-                                  .toISOString()
-                                  .split("T")[0]
-                              : ""
-                          }
+                          value={formatDateString(passenger.passportExpiry)}
                           className="text-sm"
                         />
                         <ReadOnlyField
