@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { User, FileCheck, FileX, Search } from 'lucide-react'
+import { User, FileCheck, FileX, Search, Plane } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -66,7 +66,7 @@ const Passengers = () => {
       flightNumber: `FL${passenger.passengerFlightId}`, // Use passengerFlightId
       seatNumber: 'N/A', // API doesn't provide seat number
       ticketClass: '', // Default
-
+      numberOfFlights: passenger.numberOfFlights, // Add number of flights from API
       hasDocuments: passenger.passengerDocuments.length > 0,
       phone: 'N/A', // API doesn't provide phone
       nationality: passenger.nationality || passenger.passengerDocuments[0]?.nationality || 'N/A',
@@ -98,6 +98,7 @@ const Passengers = () => {
   const totalPassengers = passengers.length
   const passengersWithDocuments = passengers.filter(p => p.hasDocuments).length
   const passengersWithoutDocuments = passengers.filter(p => !p.hasDocuments).length
+  const totalFlights = passengers.reduce((sum, passenger) => sum + (passenger.numberOfFlights || 0), 0)
 
   if (loading) {
     return (
@@ -152,7 +153,7 @@ const Passengers = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{passengersWithDocuments}</div>
-              <p className="text-xs text-green-600">{Math.round((passengersWithDocuments / totalPassengers) * 100)}% of total</p>
+              <p className="text-xs text-green-600">{totalPassengers > 0 ? Math.round((passengersWithDocuments / totalPassengers) * 100) : 0}% of total</p>
             </CardContent>
           </Card>
           <Card>
@@ -162,7 +163,7 @@ const Passengers = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{passengersWithoutDocuments}</div>
-              <p className="text-xs text-red-600">{Math.round((passengersWithoutDocuments / totalPassengers) * 100)}% of total</p>
+              <p className="text-xs text-red-600">{totalPassengers > 0 ? Math.round((passengersWithoutDocuments / totalPassengers) * 100) : 0}% of total</p>
             </CardContent>
           </Card>
         </div>
@@ -235,6 +236,12 @@ const Passengers = () => {
                       </Button>
                     </div>
                   </div>
+                  <div className="text-sm text-gray-600">
+                    <span className="flex items-center space-x-1">
+                      <Plane className="h-3 w-3" />
+                      <span>{passenger.numberOfFlights || 0} flight{(passenger.numberOfFlights || 0) !== 1 ? 's' : ''}</span>
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -245,6 +252,7 @@ const Passengers = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Number of Flights</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -261,6 +269,12 @@ const Passengers = () => {
                           {!passenger.hasDocuments && (
                             <Badge variant="destructive" className="ml-2">Missing Documents</Badge>
                           )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1 text-gray-600">
+                          <Plane className="h-4 w-4" />
+                          <span>{passenger.numberOfFlights || 0} flight{(passenger.numberOfFlights || 0) !== 1 ? 's' : ''}</span>
                         </div>
                       </TableCell>
                       <TableCell>
