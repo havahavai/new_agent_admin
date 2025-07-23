@@ -35,6 +35,7 @@ import {
   type BoardingPass,
 } from "@/data/flights";
 import { countries } from "@/data/countries";
+import { getCheckinStatusDisplay } from "@/lib/utils";
 
 import {
   getFlightDataByIds,
@@ -1163,19 +1164,9 @@ const TripDetails = () => {
     }
   };
 
-  const getWebCheckinStatusColor = (status: string) => {
-    switch (status) {
-      case "Completed":
-        return "bg-green-100 text-green-800";
-      case "In Progress":
-        return "bg-blue-100 text-blue-800";
-      case "Scheduled":
-        return "bg-yellow-100 text-yellow-800";
-      case "Failed":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  // Use the centralized utility function for check-in status
+  const getCheckinStatusInfo = (status: string) => {
+    return getCheckinStatusDisplay(status);
   };
 
   if (loading) {
@@ -1279,12 +1270,17 @@ const TripDetails = () => {
             </div>
           </div>
           <div className="flex items-center">
-            <Badge
-              className={getWebCheckinStatusColor(flight.webCheckinStatus)}
-              variant="outline"
-            >
-              Web Check-in: {flight.webCheckinStatus}
-            </Badge>
+            {(() => {
+              const statusInfo = getCheckinStatusInfo(flight.checkInStatus);
+              return (
+                <Badge
+                  className={statusInfo.colorClass}
+                  variant="outline"
+                >
+                  Web Check-in: {statusInfo.displayStatus}
+                </Badge>
+              );
+            })()}
           </div>
         </div>
       </div>
