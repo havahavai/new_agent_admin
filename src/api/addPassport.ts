@@ -17,6 +17,7 @@ export const addPassport = async (
   placeOfIssue: string
 ): Promise<AddPassportResponse | ApiError> => {
   try {
+    //comment
     const jwtToken = getJwtToken();
 
     if (!jwtToken) {
