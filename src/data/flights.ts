@@ -49,6 +49,11 @@ export interface BoardingPass {
   boardingPassUrl?: string; // URL to the actual boarding pass from API
 }
 
+export interface TicketDocument {
+  url: string;
+  name: string;
+}
+
 export interface BookingDetails {
   pnr: string;
   bookingReference: string;
@@ -64,6 +69,7 @@ export interface BookingDetails {
   currency: string;
   contactEmail: string;
   contactPhone: string;
+  ticketDocuments?: TicketDocument[];
 }
 
 // Generate dates for the next 30 days

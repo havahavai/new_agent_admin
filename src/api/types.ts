@@ -6,6 +6,7 @@ export interface FlightData {
   ticketId: string;
   flightNumber: string;
   checkInStatus: string;
+  checkInSubStatus?: string;
   airline: string;
   departureAirport: string;
   arrivalAirport: string;
@@ -60,6 +61,11 @@ export interface FlightPassenger {
   documents: PassengerDocument[];
 }
 
+export interface TicketDocument {
+  url: string;
+  name: string;
+}
+
 export interface FlightDataByIdsResponse {
   success: boolean;
   data: {
@@ -68,6 +74,7 @@ export interface FlightDataByIdsResponse {
     flightClass: string;
     bookingReference: string;
     checkInStatus: string;
+    checkInSubStatus?: string;
     isInternational: boolean;
     aircraftType: string;
     delay: string;
@@ -75,6 +82,7 @@ export interface FlightDataByIdsResponse {
     Terminal: string;
     departure: FlightDeparture;
     arrival: FlightArrival;
+    ticketDocumets: TicketDocument[]; // Note: keeping the typo from API response
     passengers: FlightPassenger[];
   };
 }

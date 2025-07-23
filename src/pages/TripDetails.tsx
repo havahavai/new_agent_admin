@@ -117,7 +117,7 @@ const convertApiToBookingDetails = (
           ? "Pending"
           : ("Checked In" as BookingPassenger["status"]),
       isMainPassenger: index === 0,
-      dateOfBirth: passenger.dateOfBirth || new Date().toISOString(),
+      dateOfBirth: passenger.dateOfBirth || "",
       gender: (passenger.gender === "Female" ? "Female" : "Male") as
         | "Male"
         | "Female",
@@ -186,6 +186,7 @@ const convertApiToBookingDetails = (
       departure: extractTimeFromISO(apiData.departure.time),
       arrival: extractTimeFromISO(apiData.arrival.time),
       checkInStatus: apiData.checkInStatus,
+      checkInSubStatus: apiData.checkInSubStatus,
       aircraft: apiData.aircraftType,
       gate: apiData.boardingGate || "TBD",
       status: flightStatus,
@@ -207,6 +208,7 @@ const convertApiToBookingDetails = (
     currency: "USD",
     contactEmail: passengers[0]?.email || "",
     contactPhone: passengers[0]?.phone || "",
+    ticketDocuments: apiData.ticketDocumets || [], // Note: keeping the typo from API
   };
 };
 
@@ -218,6 +220,7 @@ interface EditableFieldProps {
   type?: "text" | "email" | "tel" | "date";
   className?: string;
   isRequired?: boolean;
+  showGreyWhenEmpty?: boolean; // New prop for booking reference
 }
 
 const EditableField: React.FC<EditableFieldProps> = ({
@@ -227,8 +230,10 @@ const EditableField: React.FC<EditableFieldProps> = ({
   type = "text",
   className = "",
   isRequired = false,
+  showGreyWhenEmpty = false,
 }) => {
   const isEmpty = isRequired && (!value || value.trim() === "");
+  const shouldShowRed = isEmpty && !showGreyWhenEmpty;
 
   if (type === "date") {
     const dateValue = value ? new Date(value) : undefined;
@@ -258,8 +263,10 @@ const EditableField: React.FC<EditableFieldProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`mt-1 h-9 text-sm ${
-          isEmpty
+          shouldShowRed
             ? "border-red-500 border-2 focus:border-red-500 focus:ring-red-500"
+            : isEmpty && showGreyWhenEmpty
+            ? "border-gray-400 border-2 focus:border-gray-400 focus:ring-gray-400"
             : ""
         }`}
       />
@@ -649,6 +656,16 @@ const TripDetails = () => {
       "-"
     )}`;
     link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadTicketDocument = (url: string, name: string) => {
+    // Download the ticket document from the URL
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name || "boarding-pass";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1165,8 +1182,8 @@ const TripDetails = () => {
   };
 
   // Use the centralized utility function for check-in status
-  const getCheckinStatusInfo = (status: string) => {
-    return getCheckinStatusDisplay(status);
+  const getCheckinStatusInfo = (status: string, subStatus?: string) => {
+    return getCheckinStatusDisplay(status, subStatus);
   };
 
   if (loading) {
@@ -1269,9 +1286,9 @@ const TripDetails = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center space-x-3">
             {(() => {
-              const statusInfo = getCheckinStatusInfo(flight.checkInStatus);
+              const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus);
               return (
                 <Badge
                   className={statusInfo.colorClass}
@@ -1281,6 +1298,19 @@ const TripDetails = () => {
                 </Badge>
               );
             })()}
+            {bookingDetails.ticketDocuments && bookingDetails.ticketDocuments.length > 0 && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  const firstDocument = bookingDetails.ticketDocuments![0];
+                  handleDownloadTicketDocument(firstDocument.url, firstDocument.name);
+                }}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+              >
+                <Download className="h-4 w-4" />
+                <span>Download Boarding Pass</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -1322,6 +1352,7 @@ const TripDetails = () => {
                     handleFieldChange("booking", "bookingReference", value)
                   }
                   isRequired={true}
+                  showGreyWhenEmpty={true}
                   className="text-sm"
                 />
                 <ReadOnlyField
@@ -1488,20 +1519,7 @@ const TripDetails = () => {
                             <span>Edit Details</span>
                           </Button>
                         )}
-                        {passenger.boardingPass && (
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              handleDownloadBoardingPass(
-                                passenger.boardingPass!
-                              )
-                            }
-                            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Download className="h-4 w-4" />
-                            <span>Download Boarding Pass</span>
-                          </Button>
-                        )}
+
                       </div>
                     </div>
 

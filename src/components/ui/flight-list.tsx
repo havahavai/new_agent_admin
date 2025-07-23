@@ -17,6 +17,7 @@ export interface Flight {
   departure: string
   arrival: string
   checkInStatus: string
+  checkInSubStatus?: string
   passengers: number
   aircraft: string
   gate?: string
@@ -53,8 +54,8 @@ export const FlightList: React.FC<FlightListProps> = ({
 
 
   // Use the centralized utility function for check-in status
-  const getCheckinStatusInfo = (status: string) => {
-    return getCheckinStatusDisplay(status)
+  const getCheckinStatusInfo = (status: string, subStatus?: string) => {
+    return getCheckinStatusDisplay(status, subStatus)
   }
 
   const getFlightTypeColor = (type: Flight['flightType']) => {
@@ -135,7 +136,7 @@ export const FlightList: React.FC<FlightListProps> = ({
                   <div className="text-sm">
                     <span className="text-gray-500">Web Check-in: </span>
                     {(() => {
-                      const statusInfo = getCheckinStatusInfo(flight.checkInStatus)
+                      const statusInfo = getCheckinStatusInfo(flight.checkInStatus,flight.checkInSubStatus)
                       return (
                         <Badge className={statusInfo.colorClass} variant="outline">
                           {statusInfo.displayStatus}
@@ -164,7 +165,7 @@ export const FlightList: React.FC<FlightListProps> = ({
                     <div className="text-sm">
                       <div className="text-gray-500">Web Check-in</div>
                       {(() => {
-                        const statusInfo = getCheckinStatusInfo(flight.checkInStatus)
+                        const statusInfo = getCheckinStatusInfo(flight.checkInStatus,flight.checkInSubStatus)
                         return (
                           <Badge className={statusInfo.colorClass} variant="outline">
                             {statusInfo.displayStatus}
