@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from './card'
 import { Badge } from './badge'
 import { Plane, Users } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getCheckinStatusDisplay } from '@/lib/utils'
 
 export interface Flight {
   id: string
@@ -52,21 +52,9 @@ export const FlightList: React.FC<FlightListProps> = ({
   }
 
 
-  const getWebCheckinStatusColor = (status: Flight['webCheckinStatus']) => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-green-100 text-green-800'
-      case 'Scheduled':
-        return 'bg-blue-100 text-blue-800'
-      case 'Failed':
-        return 'bg-red-100 text-red-800'
-      case 'In Progress':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Document Pending':
-        return 'bg-orange-100 text-orange-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
+  // Use the centralized utility function for check-in status
+  const getCheckinStatusInfo = (status: string) => {
+    return getCheckinStatusDisplay(status)
   }
 
   const getFlightTypeColor = (type: Flight['flightType']) => {
@@ -146,9 +134,14 @@ export const FlightList: React.FC<FlightListProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="text-sm">
                     <span className="text-gray-500">Web Check-in: </span>
-                    <Badge className={getWebCheckinStatusColor(flight.webCheckinStatus)} variant="outline">
-                      {flight.checkInStatus}
-                    </Badge>
+                    {(() => {
+                      const statusInfo = getCheckinStatusInfo(flight.checkInStatus)
+                      return (
+                        <Badge className={statusInfo.colorClass} variant="outline">
+                          {statusInfo.displayStatus}
+                        </Badge>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
@@ -170,9 +163,14 @@ export const FlightList: React.FC<FlightListProps> = ({
                     </div>
                     <div className="text-sm">
                       <div className="text-gray-500">Web Check-in</div>
-                      <Badge className={getWebCheckinStatusColor(flight.webCheckinStatus)} variant="outline">
-                        {flight.checkInStatus}
-                      </Badge>
+                      {(() => {
+                        const statusInfo = getCheckinStatusInfo(flight.checkInStatus)
+                        return (
+                          <Badge className={statusInfo.colorClass} variant="outline">
+                            {statusInfo.displayStatus}
+                          </Badge>
+                        )
+                      })()}
                     </div>
                   </div>
                 </div>
