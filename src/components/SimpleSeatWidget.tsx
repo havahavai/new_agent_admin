@@ -118,7 +118,7 @@ const SimpleSeatWidget: React.FC<SimpleSeatWidgetProps> = ({ checkInPreference }
                 </div>
                 <Button
                   onClick={() => handleSelectSeats(count)}
-                  className="flex items-center space-x-2"
+                  className="hidden md:flex items-center space-x-2"
                   variant={currentPref ? "outline" : "default"}
                 >
                   <Plane className="h-4 w-4" />

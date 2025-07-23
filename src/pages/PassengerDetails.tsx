@@ -28,7 +28,9 @@ import {
   Upload,
   Download,
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  Copy,
+  Check
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -65,6 +67,9 @@ const PassengerDetails = () => {
 
   // Form validation states
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  // Copy functionality state
+  const [copiedField, setCopiedField] = useState<string | null>(null)
 
   // Remove navigation state dependency - always fetch from API
 
@@ -111,11 +116,15 @@ const PassengerDetails = () => {
             // Store the current passenger data for document operations
             setCurrentPassengerData(passengerData)
 
+            // Use names exactly as received from the API response
+            const rawFirstName = passengerData.firstName || ''
+            const rawLastName = passengerData.lastName || ''
+
             setPassenger({
               id: `P${passengerData.passengerId}`,
-              name: `${passengerData.firstName} ${passengerData.lastName}`,
-              firstName: passengerData.firstName,
-              lastName: passengerData.lastName,
+              name: `${rawFirstName} ${rawLastName}`.trim(),
+              firstName: rawFirstName,
+              lastName: rawLastName,
               email: passengerData.email || '',
               phone: passengerData.mobileNumber || '',
               hasDocuments: passengerData.passengerDocuments.length > 0,
@@ -204,6 +213,31 @@ const PassengerDetails = () => {
     // Clear validation error when user starts typing
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
+  // Copy to clipboard function
+  const handleCopyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedField(fieldName)
+      setTimeout(() => setCopiedField(null), 2000) // Clear after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        setCopiedField(fieldName)
+        setTimeout(() => setCopiedField(null), 2000)
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed: ', fallbackErr)
+      }
+      document.body.removeChild(textArea)
     }
   }
 
@@ -630,12 +664,28 @@ const PassengerDetails = () => {
                       <label className="text-sm font-medium text-gray-700">
                         Last Name
                       </label>
-                      <Input
-                        value={passenger.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        className={`mt-1 h-9 text-sm ${validationErrors.lastName ? 'border-red-500' : ''}`}
-                        placeholder="Enter last name"
-                      />
+                      <div className="relative">
+                        <Input
+                          value={passenger.lastName}
+                          onChange={(e) => handleInputChange('lastName', e.target.value)}
+                          className={`mt-1 h-9 text-sm pr-10 ${validationErrors.lastName ? 'border-red-500' : ''}`}
+                          placeholder="Enter last name"
+                        />
+                        {passenger.lastName && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyToClipboard(passenger.lastName, 'lastName')}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 mt-0.5 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Copy last name"
+                          >
+                            {copiedField === 'lastName' ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
                       {validationErrors.lastName && (
                         <p className="text-red-500 text-xs mt-1">{validationErrors.lastName}</p>
                       )}

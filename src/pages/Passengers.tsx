@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { User, FileCheck, FileX, Search, Plane } from 'lucide-react'
+import { User, FileCheck, FileX, Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +17,8 @@ const Passengers = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [apiPassengers, setApiPassengers] = useState<PassengerDetail[]>([])
+  const [sortField, setSortField] = useState<'name' | 'numberOfFlights' | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     const checkMobile = () => {
@@ -59,26 +61,58 @@ const Passengers = () => {
 
   // Convert API data to component format
   const passengers = useMemo(() => {
-    return apiPassengers.map((passenger) => ({
-      id: `P${passenger.passengerId}`,
-      name: `${passenger.firstName} ${passenger.lastName}`,
-      email: 'N/A', // API doesn't provide email
-      flightNumber: `FL${passenger.passengerFlightId}`, // Use passengerFlightId
-      seatNumber: 'N/A', // API doesn't provide seat number
-      ticketClass: '', // Default
-      numberOfFlights: passenger.numberOfFlights, // Add number of flights from API
-      hasDocuments: passenger.passengerDocuments.length > 0,
-      phone: 'N/A', // API doesn't provide phone
-      nationality: passenger.nationality || passenger.passengerDocuments[0]?.nationality || 'N/A',
-      passportNumber: passenger.passengerDocuments[0]?.documentNumber || 'N/A',
-    }))
+    return apiPassengers.map((passenger) => {
+      // Process names to ensure proper separation
+      let processedFirstName = passenger.firstName || ''
+      let processedLastName = passenger.lastName || ''
+
+      // Check if lastName contains both first and last names (common API issue)
+      if (processedLastName.includes(' ') && processedFirstName && processedLastName.startsWith(processedFirstName)) {
+        // Extract only the last name part
+        processedLastName = processedLastName.replace(processedFirstName, '').trim()
+      }
+
+      // Check if firstName contains both names and lastName is empty or same as firstName
+      if (processedFirstName.includes(' ') && (!processedLastName || processedLastName === processedFirstName)) {
+        const nameParts = processedFirstName.split(' ')
+        processedFirstName = nameParts[0]
+        processedLastName = nameParts.slice(1).join(' ')
+      }
+
+      return {
+        id: `P${passenger.passengerId}`,
+        name: `${processedFirstName} ${processedLastName}`.trim(),
+        email: 'N/A', // API doesn't provide email
+        flightNumber: `FL${passenger.passengerFlightId}`, // Use passengerFlightId
+        seatNumber: 'N/A', // API doesn't provide seat number
+        ticketClass: '', // Default
+        numberOfFlights: passenger.numberOfFlights, // Add number of flights from API
+        hasDocuments: passenger.passengerDocuments.length > 0,
+        phone: 'N/A', // API doesn't provide phone
+        nationality: passenger.nationality || passenger.passengerDocuments[0]?.nationality || 'N/A',
+        passportNumber: passenger.passengerDocuments[0]?.documentNumber || 'N/A',
+      }
+    })
   }, [apiPassengers])
 
 
 
-  // Filter passengers based on search and filters
+  // Handle sorting
+  const handleSort = (field: 'name' | 'numberOfFlights') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // Filter and sort passengers
   const filteredPassengers = useMemo(() => {
-    return passengers.filter(passenger => {
+    let filtered = passengers.filter(passenger => {
+      // Exclude passengers with null or empty names
+      const hasValidName = passenger.name && passenger.name.trim() !== ''
+
       // Search filter
       const matchesSearch = searchQuery === '' ||
         passenger.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -90,9 +124,37 @@ const Passengers = () => {
         (documentFilter === 'with-documents' && passenger.hasDocuments) ||
         (documentFilter === 'without-documents' && !passenger.hasDocuments)
 
-      return matchesSearch && matchesDocument
+      return hasValidName && matchesSearch && matchesDocument
     })
-  }, [passengers, searchQuery, documentFilter])
+
+    // Apply sorting
+    if (sortField) {
+      filtered.sort((a, b) => {
+        let aValue: string | number
+        let bValue: string | number
+
+        if (sortField === 'name') {
+          aValue = a.name.toLowerCase()
+          bValue = b.name.toLowerCase()
+        } else if (sortField === 'numberOfFlights') {
+          aValue = a.numberOfFlights || 0
+          bValue = b.numberOfFlights || 0
+        } else {
+          return 0
+        }
+
+        if (aValue < bValue) {
+          return sortDirection === 'asc' ? -1 : 1
+        }
+        if (aValue > bValue) {
+          return sortDirection === 'asc' ? 1 : -1
+        }
+        return 0
+      })
+    }
+
+    return filtered
+  }, [passengers, searchQuery, documentFilter, sortField, sortDirection])
 
   // Calculate statistics
   const totalPassengers = passengers.length
@@ -125,13 +187,6 @@ const Passengers = () => {
           </div>
         </div>
       )}
-
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Passengers</h1>
-          <p className="mt-2 text-gray-600">Manage passenger information and bookings</p>
-        </div>
-      </div>
 
       {/* Stats Cards - Hidden on mobile */}
       {!isMobile && (
@@ -216,31 +271,14 @@ const Passengers = () => {
                   className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => navigate(`/passengers/${passenger.id}`)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="font-medium text-gray-900">{passenger.name}</div>
-                      {!passenger.hasDocuments && (
-                        <Badge variant="destructive" className="ml-2">Missing Documents</Badge>
-                      )}
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/passengers/${passenger.id}`)
-                        }}
-                      >
-                        View Details
-                      </Button>
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="font-medium text-gray-900">{passenger.name}</div>
+                    {!passenger.hasDocuments && (
+                      <FileX className="h-4 w-4 text-red-500" />
+                    )}
                   </div>
                   <div className="text-sm text-gray-600">
-                    <span className="flex items-center space-x-1">
-                      <Plane className="h-3 w-3" />
-                      <span>{passenger.numberOfFlights || 0} flight{(passenger.numberOfFlights || 0) !== 1 ? 's' : ''}</span>
-                    </span>
+                    <span>{passenger.numberOfFlights || 0} flight{(passenger.numberOfFlights || 0) !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
               ))}
@@ -251,8 +289,40 @@ const Passengers = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Number of Flights</TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort('name')}
+                        className="flex items-center space-x-1 hover:text-gray-900 transition-colors"
+                      >
+                        <span>Name</span>
+                        {sortField === 'name' ? (
+                          sortDirection === 'asc' ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ChevronUp className="h-4 w-4 opacity-30" />
+                        )}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort('numberOfFlights')}
+                        className="flex items-center space-x-1 hover:text-gray-900 transition-colors"
+                      >
+                        <span>Number of Flights</span>
+                        {sortField === 'numberOfFlights' ? (
+                          sortDirection === 'asc' ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )
+                        ) : (
+                          <ChevronUp className="h-4 w-4 opacity-30" />
+                        )}
+                      </button>
+                    </TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -272,8 +342,7 @@ const Passengers = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-1 text-gray-600">
-                          <Plane className="h-4 w-4" />
+                        <div className="text-gray-600">
                           <span>{passenger.numberOfFlights || 0} flight{(passenger.numberOfFlights || 0) !== 1 ? 's' : ''}</span>
                         </div>
                       </TableCell>

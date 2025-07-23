@@ -27,6 +27,9 @@ import {
   User,
   Edit,
   Clock,
+  CreditCard,
+  Printer,
+  Eye,
 } from "lucide-react";
 import {
   getBookingDetails,
@@ -1247,7 +1250,7 @@ const TripDetails = () => {
   } = bookingDetails;
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-4xl">
       {/* Error Message */}
       {error && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
@@ -1276,38 +1279,43 @@ const TripDetails = () => {
           </Button>
         </div>
 
-        {/* Header content row */}
-        <div className="flex items-start justify-between">
+        {/* Header content - Mobile responsive layout */}
+        <div className="space-y-4">
+          {/* Flight title and basic info */}
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               {flight.route.fromCode} → {flight.route.toCode}
             </h1>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-gray-600 mt-2">
               <p>Flight {flight.flightNumber}</p>
               <p className="flex items-center space-x-1">
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span>
                   PNR:{" "}
                   <span className="font-semibold text-gray-900">{pnr}</span>
                 </span>
               </p>
               <p className="flex items-center space-x-1">
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span>
                   {totalPassengers} passenger{totalPassengers !== 1 ? "s" : ""}
                 </span>
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+
+          {/* Status badge and download button - Mobile responsive */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {(() => {
               const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus);
               return (
                 <Badge
-                  className={statusInfo.colorClass}
+                  className={`${statusInfo.colorClass} text-xs sm:text-sm w-fit`}
                   variant="outline"
                 >
-                  Web Check-in: {statusInfo.displayStatus}
+                  <span className="hidden sm:inline">Web Check-in: </span>
+                  <span className="sm:hidden">Check-in: </span>
+                  {statusInfo.displayStatus}
                 </Badge>
               );
             })()}
@@ -1318,10 +1326,11 @@ const TripDetails = () => {
                   const firstDocument = bookingDetails.ticketDocuments![0];
                   handleDownloadTicketDocument(firstDocument.url, firstDocument.name);
                 }}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 w-fit text-xs sm:text-sm px-3 py-2"
               >
-                <Download className="h-4 w-4" />
-                <span>Download Boarding Pass</span>
+                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Download Boarding Pass</span>
+                <span className="sm:hidden">Download</span>
               </Button>
             )}
           </div>
@@ -1337,10 +1346,10 @@ const TripDetails = () => {
       >
         {/* Booking Information */}
         <AccordionItem value="booking-info">
-          <AccordionTrigger className="text-left">
+          <AccordionTrigger className="text-left py-4 sm:py-3">
             <div className="flex items-center space-x-2">
               <FileText className="h-5 w-5" />
-              <span>Booking Information</span>
+              <span className="text-sm sm:text-base">Booking Information</span>
               {sectionChanges.booking && (
                 <div className="w-2 h-2 bg-orange-500 rounded-full ml-2"></div>
               )}
@@ -1395,10 +1404,10 @@ const TripDetails = () => {
         </AccordionItem>
         {/* Flight Information */}
         <AccordionItem value="flight-info">
-          <AccordionTrigger className="text-left">
+          <AccordionTrigger className="text-left py-4 sm:py-3">
             <div className="flex items-center space-x-2">
               <Plane className="h-5 w-5" />
-              <span>Flight Information</span>
+              <span className="text-sm sm:text-base">Flight Information</span>
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -1474,14 +1483,14 @@ const TripDetails = () => {
 
         {/* Passenger Details */}
         <AccordionItem value="passengers">
-          <AccordionTrigger className="text-left">
+          <AccordionTrigger className="text-left py-4 sm:py-3">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5" />
-              <span>Passenger Details ({totalPassengers} passengers)</span>
+              <span className="text-sm sm:text-base">Passenger Details ({totalPassengers} passengers)</span>
             </div>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-6 pt-4">
+            <div className="space-y-4 sm:space-y-6 pt-4">
               {passengers.map((passenger, index) => (
                 <Card
                   key={passenger.id}
@@ -1491,7 +1500,7 @@ const TripDetails = () => {
                       : "border-l-gray-300"
                   }`}
                 >
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     {/* Header with name, status, and boarding pass button */}
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
                       <div className="flex items-center space-x-3">
@@ -1499,7 +1508,23 @@ const TripDetails = () => {
                         <div>
                           <div className="flex items-center space-x-2">
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {passenger.name}
+                              <button
+                                onClick={() => {
+                                  if (passenger.passengerId) {
+                                    const passengerUrl = `/passengers/P${passenger.passengerId}`;
+                                    window.open(passengerUrl, '_blank');
+                                  }
+                                }}
+                                className={`transition-colors duration-200 ${
+                                  passenger.passengerId
+                                    ? 'text-blue-600 hover:text-blue-800 hover:underline cursor-pointer'
+                                    : 'text-gray-900 cursor-default'
+                                }`}
+                                title={passenger.passengerId ? "Click to view passenger details in new tab" : "Passenger details not available"}
+                                disabled={!passenger.passengerId}
+                              >
+                                {passenger.name}
+                              </button>
                             </h3>
                             {passenger.isMainPassenger && (
                               <Badge variant="secondary" className="text-xs">
@@ -1640,6 +1665,282 @@ const TripDetails = () => {
             </div>
           </AccordionContent>
         </AccordionItem>
+
+        {/* Boarding Passes */}
+        {(passengers.some(p => p.boardingPass) || bookingDetails.ticketDocuments?.length) && (
+          <AccordionItem value="boarding-passes">
+            <AccordionTrigger className="text-left">
+              <div className="flex items-center space-x-2">
+                <CreditCard className="h-5 w-5" />
+                <span>Boarding Passes ({passengers.filter(p => p.boardingPass).length + (bookingDetails.ticketDocuments?.length || 0)} available)</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4 pt-4">
+                {/* Show ticket documents (official boarding passes) */}
+                {bookingDetails.ticketDocuments?.map((document, index) => (
+                  <Card key={`ticket-${index}`} className="border-l-4 border-l-blue-500 bg-blue-50/30">
+                    <CardContent className="p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <CreditCard className="h-6 w-6 text-blue-600" />
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Official Boarding Pass
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Flight {flight.flightNumber} • {document.name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                          <Badge className="bg-blue-100 text-blue-800" variant="outline">
+                            Official Document
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* PDF Preview */}
+                      <div className="bg-white border rounded-lg mb-4 overflow-hidden">
+                        <div className="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">Boarding Pass Preview</span>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(document.url, '_blank')}
+                              className="flex items-center space-x-1"
+                            >
+                              <Eye className="h-3 w-3" />
+                              <span className="text-xs">Full View</span>
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          {document.url.toLowerCase().includes('.pdf') ? (
+                            <div className="w-full">
+                              <iframe
+                                src={`${document.url}#toolbar=0&navpanes=0&scrollbar=0`}
+                                className="w-full h-96 border-0 rounded"
+                                title={`Boarding Pass Preview - ${document.name}`}
+                                onError={(e) => {
+                                  console.error('PDF preview failed:', e);
+                                  // Fallback to link if iframe fails
+                                  const iframe = e.target as HTMLIFrameElement;
+                                  iframe.style.display = 'none';
+                                  const fallback = iframe.nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = 'block';
+                                }}
+                              />
+                              <div className="hidden text-center py-8 bg-gray-50 rounded">
+                                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                                <p className="text-gray-600 mb-2">PDF preview not available</p>
+                                <Button
+                                  size="sm"
+                                  onClick={() => window.open(document.url, '_blank')}
+                                  className="flex items-center space-x-2"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  <span>View PDF</span>
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 bg-gray-50 rounded">
+                              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-600 mb-2">Document preview not available</p>
+                              <Button
+                                size="sm"
+                                onClick={() => window.open(document.url, '_blank')}
+                                className="flex items-center space-x-2"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span>View Document</span>
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleDownloadTicketDocument(document.url, document.name)}
+                          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span>Download</span>
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(document.url, '_blank')}
+                          className="flex items-center space-x-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View Full Size</span>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* Show generated boarding passes for passengers */}
+                {passengers
+                  .filter(passenger => passenger.boardingPass)
+                  .map((passenger, index) => (
+                    <Card key={passenger.id} className="border-l-4 border-l-green-500 bg-green-50/30">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <CreditCard className="h-6 w-6 text-green-600" />
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {passenger.name}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                Seat {passenger.boardingPass!.seatNumber} • Gate {passenger.boardingPass!.gate} • Group {passenger.boardingPass!.boardingGroup}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                            <Badge className="bg-green-100 text-green-800" variant="outline">
+                              Ready to Board
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Boarding Pass URL Preview or Generated Pass Actions */}
+                        {passenger.boardingPass!.boardingPassUrl ? (
+                          <div className="bg-white border rounded-lg mb-4 overflow-hidden">
+                            <div className="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Boarding Pass Preview</span>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(passenger.boardingPass!.boardingPassUrl!, '_blank')}
+                                  className="flex items-center space-x-1"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  <span className="text-xs">Full View</span>
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              {passenger.boardingPass!.boardingPassUrl!.toLowerCase().includes('.pdf') ? (
+                                <div className="w-full">
+                                  <iframe
+                                    src={`${passenger.boardingPass!.boardingPassUrl!}#toolbar=0&navpanes=0&scrollbar=0`}
+                                    className="w-full h-96 border-0 rounded"
+                                    title={`Boarding Pass Preview - ${passenger.name}`}
+                                    onError={(e) => {
+                                      console.error('PDF preview failed:', e);
+                                      const iframe = e.target as HTMLIFrameElement;
+                                      iframe.style.display = 'none';
+                                      const fallback = iframe.nextElementSibling as HTMLElement;
+                                      if (fallback) fallback.style.display = 'block';
+                                    }}
+                                  />
+                                  <div className="hidden text-center py-8 bg-gray-50 rounded">
+                                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-gray-600 mb-2">PDF preview not available</p>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => window.open(passenger.boardingPass!.boardingPassUrl!, '_blank')}
+                                      className="flex items-center space-x-2"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                      <span>View PDF</span>
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-center py-8 bg-gray-50 rounded">
+                                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                                  <p className="text-gray-600 mb-2">Document preview not available</p>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => window.open(passenger.boardingPass!.boardingPassUrl!, '_blank')}
+                                    className="flex items-center space-x-2"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    <span>View Document</span>
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-white border rounded-lg mb-4 p-4">
+                            <div className="text-center py-4">
+                              <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-600 mb-2">Generated boarding pass available</p>
+                              <p className="text-sm text-gray-500">Download or print to view boarding pass</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Action Buttons - Mobile responsive */}
+                        <div className="flex flex-wrap gap-2">
+                          {passenger.boardingPass!.boardingPassUrl ? (
+                            <Button
+                              size="sm"
+                              onClick={() => handleDownloadActualBoardingPass(
+                                passenger.boardingPass!.boardingPassUrl!,
+                                passenger.name,
+                                flight.flightNumber
+                              )}
+                              className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm px-2 sm:px-3"
+                            >
+                              <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline">Download Official Pass</span>
+                              <span className="sm:hidden">Official</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => handleDownloadBoardingPass(passenger.boardingPass!)}
+                              className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm px-2 sm:px-3"
+                            >
+                              <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline">Download HTML</span>
+                              <span className="sm:hidden">HTML</span>
+                            </Button>
+                          )}
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePrintBoardingPass(passenger.boardingPass!)}
+                            className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3"
+                          >
+                            <Printer className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span>Print</span>
+                          </Button>
+
+                          {passenger.boardingPass!.boardingPassUrl && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(passenger.boardingPass!.boardingPassUrl!, '_blank')}
+                              className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 sm:px-3"
+                            >
+                              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline">View Full Size</span>
+                              <span className="sm:hidden">View</span>
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
     </div>
   );
