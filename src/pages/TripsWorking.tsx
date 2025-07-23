@@ -60,6 +60,7 @@ const getFlightsForSelectedDate = (flights: FlightData[], selectedDate: Date) =>
     departure: extractTimeFromISO(flight.departureTime),
     arrival: extractTimeFromISO(flight.arrivalTime),
     checkInStatus: flight.checkInStatus,
+    checkInSubStatus: flight.checkInSubStatus, // Add the missing checkInSubStatus field
     passengers: parseInt(flight.numberOfPassengers),
     aircraft: flight.airline, // Use airline as aircraft for now
     webCheckinStatus: flight.checkInStatus === 'NONE' ? 'Scheduled' :
