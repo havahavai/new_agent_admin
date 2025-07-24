@@ -5,6 +5,8 @@ export interface BookingPassenger {
   id: string;
   passengerId?: number;
   name: string;
+  firstName?: string; // Add separate firstName field
+  lastName?: string;  // Add separate lastName field
   email?: string;
   phone?: string;
   seatNumber?: string;
@@ -590,6 +592,8 @@ const generateBookingPassengers = (
     const passenger: BookingPassenger = {
       id: `${pnr}-P${i + 1}`,
       name: `${member.name} ${familyGroup.lastName}`,
+      firstName: member.name,
+      lastName: familyGroup.lastName,
       email:
         i === 0
           ? `${member.name.toLowerCase()}.${familyGroup.lastName.toLowerCase()}@email.com`

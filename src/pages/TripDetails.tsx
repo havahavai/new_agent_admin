@@ -123,6 +123,8 @@ const convertApiToBookingDetails = (
       id: `passenger-${index}`,
       passengerId: passenger.passengerId,
       name: `${passenger.firstName} ${passenger.lastName}`,
+      firstName: passenger.firstName, // Add separate firstName field
+      lastName: passenger.lastName,   // Add separate lastName field
       email: passenger.email,
       phone: passenger.mobileNumber,
       seatNumber: passenger.seatNumber || "",
@@ -1569,14 +1571,12 @@ const TripDetails = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         <ReadOnlyField
                           label="First Name"
-                          value={passenger.name.split(" ")[0] || ""}
+                          value={passenger.firstName || ""}
                           className="text-sm"
                         />
                         <ReadOnlyField
                           label="Last Name"
-                          value={
-                            passenger.name.split(" ").slice(1).join(" ") || ""
-                          }
+                          value={passenger.lastName || ""}
                           className="text-sm"
                         />
                         <ReadOnlyField
