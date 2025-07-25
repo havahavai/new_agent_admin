@@ -114,6 +114,35 @@ const formatDateString = (dateString: string | undefined | null): string => {
   return date.toISOString().split("T")[0];
 };
 
+// Helper function to extract airline name from flight number
+const getAirlineFromFlightNumber = (flightNumber: string): string => {
+  const airlineMap: { [key: string]: string } = {
+    "AI": "Air India",
+    "AA": "American Airlines",
+    "UA": "United Airlines",
+    "DL": "Delta Air Lines",
+    "SW": "Southwest Airlines",
+    "JB": "JetBlue Airways",
+    "AS": "Alaska Airlines",
+    "NK": "Spirit Airlines",
+    "F9": "Frontier Airlines",
+    "6E": "IndiGo",
+    "SG": "SpiceJet",
+    "UK": "Vistara",
+    "G8": "GoAir",
+    "I5": "AirAsia India"
+  };
+
+  // Extract airline code from flight number (first 2-3 characters)
+  const match = flightNumber.match(/^([A-Z]{1,3})/);
+  if (match) {
+    const code = match[1];
+    return airlineMap[code] || code; // Return full name or code if not found
+  }
+
+  return ""; // Return empty if no match
+};
+
 // Helper function to convert API response to BookingDetails format
 const convertApiToBookingDetails = (
   apiData: FlightDataByIdsResponse["data"]

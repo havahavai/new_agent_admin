@@ -287,6 +287,8 @@ const generateFlightNumber = (daysDiff: number, index: number): string => {
   return `${airline}${number}`;
 };
 
+
+
 const generateRandomStatus = (
   daysDiff: number,
   index: number

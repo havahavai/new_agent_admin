@@ -8,6 +8,7 @@ import { cn, getCheckinStatusDisplay } from '@/lib/utils'
 export interface Flight {
   id: string
   flightNumber: string
+  airline?: string // Add airline field
   route: {
     from: string
     to: string
@@ -117,7 +118,10 @@ export const FlightList: React.FC<FlightListProps> = ({
               <div className="block md:hidden space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold text-gray-900">{index === 0 ? 'AI 675' : flight.flightNumber}</div>
+                    <div className="font-semibold text-gray-900">{flight.flightNumber}</div>
+                    {flight.airline && (
+                      <div className="text-xs text-gray-500 mb-1">{flight.airline}</div>
+                    )}
                     <div className="text-sm text-gray-600">{flight.route.fromCode} → {flight.route.toCode}</div>
                   </div>
                   <Badge className={getFlightTypeColor(flight.flightType)}>
@@ -151,7 +155,10 @@ export const FlightList: React.FC<FlightListProps> = ({
               <div className="hidden md:flex md:items-center md:justify-between">
                 <div className="flex items-center space-x-6 flex-1">
                   <div>
-                    <div className="font-semibold text-gray-900">{index === 0 ? 'AI 675' : flight.flightNumber}</div>
+                    <div className="font-semibold text-gray-900">{flight.flightNumber}</div>
+                    {flight.airline && (
+                      <div className="text-xs text-gray-500 mb-1">{flight.airline}</div>
+                    )}
                     <div className="text-sm text-gray-600">{flight.route.fromCode} → {flight.route.toCode}</div>
                   </div>
 
