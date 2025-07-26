@@ -97,7 +97,7 @@ export const FlightList: React.FC<FlightListProps> = ({
 
   return (
     <div className={cn('space-y-4', className)}>
-      <div className="flex items-center justify-between">
+      <div className="hidden md:flex md:items-center md:justify-between">
         <h2 className="text-xl font-semibold text-gray-900">
           Flights for {formatDate(selectedDate)}
         </h2>

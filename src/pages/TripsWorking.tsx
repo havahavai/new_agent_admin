@@ -15,12 +15,20 @@ const extractTimeFromISO = (isoString: string): string => {
   return isoString // fallback to original if parsing fails
 }
 
+// Helper function to get UTC date string from ISO string
+const getUTCDateString = (isoString: string): string => {
+  const date = new Date(isoString)
+  return date.getUTCFullYear() + '-' +
+         String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+         String(date.getUTCDate()).padStart(2, '0')
+}
+
 // Helper function to group flights by departure date
 const groupFlightsByDate = (flights: FlightData[]) => {
   const grouped: { [key: string]: FlightData[] } = {}
 
   flights.forEach(flight => {
-    const departureDate = new Date(flight.departureTime).toDateString()
+    const departureDate = getUTCDateString(flight.departureTime)
     if (!grouped[departureDate]) {
       grouped[departureDate] = []
     }
@@ -29,7 +37,7 @@ const groupFlightsByDate = (flights: FlightData[]) => {
 
   // Convert to carousel format
   const carouselData = Object.keys(grouped).map(dateString => {
-    const date = new Date(dateString)
+    const date = new Date(dateString + 'T00:00:00.000Z') // Create UTC date
     const flightsForDate = grouped[dateString]
     return {
       date,
@@ -43,9 +51,9 @@ const groupFlightsByDate = (flights: FlightData[]) => {
 
 // Helper function to get flights for selected date
 const getFlightsForSelectedDate = (flights: FlightData[], selectedDate: Date) => {
-  const selectedDateString = selectedDate.toDateString()
+  const selectedDateString = getUTCDateString(selectedDate.toISOString())
   return flights.filter(flight => {
-    const flightDate = new Date(flight.departureTime).toDateString()
+    const flightDate = getUTCDateString(flight.departureTime)
     return flightDate === selectedDateString
   }).map(flight => ({
     id: flight.flightId,

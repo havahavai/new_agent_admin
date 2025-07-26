@@ -403,6 +403,14 @@ export const findFirstDateWithFlights = (
   }
 };
 
+// Helper function to get UTC date string from ISO string
+const getUTCDateString = (isoString: string): string => {
+  const date = new Date(isoString)
+  return date.getUTCFullYear() + '-' +
+         String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+         String(date.getUTCDate()).padStart(2, '0')
+}
+
 // Get date carousel data for API flights - always shows today + next 30 days regardless of flight availability
 export const getDateCarouselDataForApi = (
   apiFlights: any[] = [],
@@ -412,10 +420,10 @@ export const getDateCarouselDataForApi = (
   const startDate = options?.startDate ?? new Date();
   const dates = generateDateRangeFrom(startDate, days, "future");
 
-  // Group API flights by date
+  // Group API flights by date using UTC dates
   const flightsByDate: { [key: string]: any[] } = {};
   apiFlights.forEach((flight) => {
-    const departureDate = new Date(flight.departureTime).toDateString();
+    const departureDate = getUTCDateString(flight.departureTime);
     if (!flightsByDate[departureDate]) {
       flightsByDate[departureDate] = [];
     }
@@ -423,7 +431,7 @@ export const getDateCarouselDataForApi = (
   });
 
   return dates.map((date) => {
-    const dateString = date.toDateString();
+    const dateString = getUTCDateString(date.toISOString());
     const flightsForDate = flightsByDate[dateString] || [];
     return {
       date,
