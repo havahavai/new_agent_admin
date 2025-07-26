@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 import {
@@ -27,9 +27,9 @@ import {
   User,
   Edit,
   Clock,
-  CreditCard,
-  Printer,
-  Eye,
+  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   getBookingDetails,
@@ -46,6 +46,20 @@ import {
   ApiError,
   updateTicket,
 } from "@/api";
+import {
+  WhatsappShareButton,
+  TelegramShareButton,
+  EmailShareButton,
+  FacebookShareButton,
+  TwitterShareButton,
+  LinkedinShareButton,
+  WhatsappIcon,
+  TelegramIcon,
+  EmailIcon,
+  FacebookIcon,
+  TwitterIcon,
+  LinkedinIcon,
+} from 'react-share';
 
 // Helper function to extract time from ISO string without timezone conversion
 const extractTimeFromISO = (isoString: string): string => {
@@ -112,35 +126,6 @@ const formatDateString = (dateString: string | undefined | null): string => {
     return "";
   }
   return date.toISOString().split("T")[0];
-};
-
-// Helper function to extract airline name from flight number
-const getAirlineFromFlightNumber = (flightNumber: string): string => {
-  const airlineMap: { [key: string]: string } = {
-    "AI": "Air India",
-    "AA": "American Airlines",
-    "UA": "United Airlines",
-    "DL": "Delta Air Lines",
-    "SW": "Southwest Airlines",
-    "JB": "JetBlue Airways",
-    "AS": "Alaska Airlines",
-    "NK": "Spirit Airlines",
-    "F9": "Frontier Airlines",
-    "6E": "IndiGo",
-    "SG": "SpiceJet",
-    "UK": "Vistara",
-    "G8": "GoAir",
-    "I5": "AirAsia India"
-  };
-
-  // Extract airline code from flight number (first 2-3 characters)
-  const match = flightNumber.match(/^([A-Z]{1,3})/);
-  if (match) {
-    const code = match[1];
-    return airlineMap[code] || code; // Return full name or code if not found
-  }
-
-  return ""; // Return empty if no match
 };
 
 // Helper function to convert API response to BookingDetails format
@@ -495,6 +480,8 @@ const TripDetails = () => {
   const [apiData, setApiData] = useState<
     FlightDataByIdsResponse["data"] | null
   >(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [pnrCopied, setPnrCopied] = useState(false);
 
   // State for tracking section changes and saving status
   const [sectionChanges, setSectionChanges] = useState<{
@@ -516,6 +503,24 @@ const TripDetails = () => {
     flight: false,
     passengers: {},
   });
+
+  // Mobile detection - improved to detect mobile devices more accurately
+  useEffect(() => {
+    const checkMobile = () => {
+      // Check for mobile devices using multiple methods
+      const isMobileWidth = window.innerWidth < 768;
+      const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+      // Consider it mobile if any of these conditions are true
+      setIsMobile(isMobileWidth || isMobileUserAgent || isTouchDevice);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchFlightDetails = async () => {
@@ -687,17 +692,137 @@ const TripDetails = () => {
     }
   };
 
-
+  const handleCopyPNR = async () => {
+    try {
+      await navigator.clipboard.writeText(pnr);
+      setPnrCopied(true);
+      setTimeout(() => setPnrCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy PNR:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = pnr;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setPnrCopied(true);
+        setTimeout(() => setPnrCopied(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
 
   const handleDownloadTicketDocument = (url: string, name: string) => {
-    // Download the ticket document from the URL
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = name || "boarding-pass";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Open the ticket document in a new tab
+    window.open(url, '_blank');
   };
+
+  // Share Button Component using react-share
+  const ShareButton = ({ url, title }: { url: string; title: string }) => {
+    const [showShareOptions, setShowShareOptions] = useState(false);
+    const shareUrl = url;
+    const shareTitle = `Check out this document: ${title}`;
+
+    // Close share options when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as Element;
+        if (showShareOptions && !target.closest('.share-dropdown')) {
+          setShowShareOptions(false);
+        }
+      };
+
+      if (showShareOptions) {
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }
+    }, [showShareOptions]);
+
+    return (
+      <div className="relative share-dropdown">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowShareOptions(!showShareOptions)}
+          className="flex items-center space-x-2"
+        >
+          <Share2 className="h-4 w-4" />
+          <span>Share</span>
+        </Button>
+
+        {showShareOptions && (
+          <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 min-w-[200px]">
+            <div className="grid grid-cols-3 gap-2">
+              <WhatsappShareButton
+                url={shareUrl}
+                title={shareTitle}
+                onClick={() => setShowShareOptions(false)}
+              >
+                <WhatsappIcon size={32} round />
+              </WhatsappShareButton>
+
+              <TelegramShareButton
+                url={shareUrl}
+                title={shareTitle}
+                onClick={() => setShowShareOptions(false)}
+              >
+                <TelegramIcon size={32} round />
+              </TelegramShareButton>
+
+              <EmailShareButton
+                url={shareUrl}
+                subject={shareTitle}
+                onClick={() => setShowShareOptions(false)}
+              >
+                <EmailIcon size={32} round />
+              </EmailShareButton>
+
+              <FacebookShareButton
+                url={shareUrl}
+                onClick={() => setShowShareOptions(false)}
+              >
+                <FacebookIcon size={32} round />
+              </FacebookShareButton>
+
+              <TwitterShareButton
+                url={shareUrl}
+                title={shareTitle}
+                onClick={() => setShowShareOptions(false)}
+              >
+                <TwitterIcon size={32} round />
+              </TwitterShareButton>
+
+              <LinkedinShareButton
+                url={shareUrl}
+                title={shareTitle}
+                onClick={() => setShowShareOptions(false)}
+              >
+                <LinkedinIcon size={32} round />
+              </LinkedinShareButton>
+            </div>
+
+            <div className="mt-3 pt-2 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl);
+                  alert('Link copied to clipboard!');
+                  setShowShareOptions(false);
+                }}
+                className="w-full text-sm text-gray-600 hover:text-gray-800 py-1"
+              >
+                Copy Link
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
 
   const handleDownloadBoardingPass = (boardingPass: BoardingPass) => {
     // Create a comprehensive HTML boarding pass
@@ -1251,15 +1376,13 @@ const TripDetails = () => {
     flight,
     passengers,
     totalPassengers,
-    checkedInPassengers,
-    boardedPassengers,
-    pendingPassengers,
-    bookingDate,
-    totalAmount,
-    currency,
     contactEmail,
     contactPhone,
   } = bookingDetails;
+
+  // Check if boarding passes are available
+  const hasBoardingPasses = passengers.some(p => p.boardingPass) || bookingDetails.ticketDocuments?.length;
+  const defaultAccordionValue = hasBoardingPasses ? "documents" : "booking-info";
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-4xl">
@@ -1292,27 +1415,94 @@ const TripDetails = () => {
         </div>
 
         {/* Header content - Mobile responsive layout */}
-        <div className="space-y-4">
-          {/* Flight title and basic info */}
+        <div className="space-y-6">
+          {/* Flight title and route */}
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {flight.route.fromCode} → {flight.route.toCode}
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+              {flight.route.from} ({flight.route.fromCode}) → {flight.route.to} ({flight.route.toCode})
             </h1>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-gray-600 mt-2">
-              <p>Flight {flight.flightNumber}</p>
-              <p className="flex items-center space-x-1">
-                <span className="hidden sm:inline">•</span>
-                <span>
-                  PNR:{" "}
-                  <span className="font-semibold text-gray-900">{pnr}</span>
-                </span>
-              </p>
-              <p className="flex items-center space-x-1">
-                <span className="hidden sm:inline">•</span>
-                <span>
-                  {totalPassengers} passenger{totalPassengers !== 1 ? "s" : ""}
-                </span>
-              </p>
+
+            {/* Flight timing card */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
+              {/* Flight number and date header */}
+              <div className="text-center mb-4">
+                <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+                  <div className="flex items-center space-x-1">
+                    <Plane className="h-4 w-4" />
+                    <span className="font-semibold">Flight {flight.flightNumber}</span>
+                  </div>
+                  <div className="w-px h-4 bg-gray-300"></div>
+                  <div className="flex items-center space-x-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{(() => {
+                      const dateStr = passengers[0]?.boardingPass?.date;
+                      if (dateStr) {
+                        // If date is already in DD/MM/YYYY format, use it
+                        if (dateStr.includes('/') && dateStr.split('/').length === 3) {
+                          return dateStr;
+                        }
+                        // Otherwise, parse and format to DD/MM/YYYY
+                        const date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) {
+                          const day = date.getDate().toString().padStart(2, '0');
+                          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                          const year = date.getFullYear();
+                          return `${day}/${month}/${year}`;
+                        }
+                      }
+                      // Fallback to current date in DD/MM/YYYY format
+                      const today = new Date();
+                      const day = today.getDate().toString().padStart(2, '0');
+                      const month = (today.getMonth() + 1).toString().padStart(2, '0');
+                      const year = today.getFullYear();
+                      return `${day}/${month}/${year}`;
+                    })()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Departure</div>
+                  <div className="text-lg font-bold text-gray-900">{flight.departure}</div>
+                  <div className="text-sm text-gray-600">{flight.route.fromCode}</div>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center space-x-2 text-blue-600">
+                    <div className="w-8 h-px bg-blue-300"></div>
+                    <Plane className="h-4 w-4" />
+                    <div className="w-8 h-px bg-blue-300"></div>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Arrival</div>
+                  <div className="text-lg font-bold text-gray-900">{flight.arrival}</div>
+                  <div className="text-sm text-gray-600">{flight.route.toCode}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Flight details */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1">
+                <span>PNR: <span className="font-semibold text-gray-900">{pnr}</span></span>
+                <button
+                  onClick={handleCopyPNR}
+                  className="ml-1 p-1 hover:bg-gray-200 rounded transition-colors"
+                  title="Copy PNR"
+                >
+                  {pnrCopied ? (
+                    <Check className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <Copy className="h-3 w-3 text-gray-500" />
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <span>{totalPassengers} passenger{totalPassengers !== 1 ? "s" : ""}</span>
+              </div>
             </div>
           </div>
 
@@ -1340,7 +1530,7 @@ const TripDetails = () => {
       <Accordion
         type="single"
         collapsible
-        defaultValue="booking-info"
+        defaultValue={defaultAccordionValue}
         className="w-full space-y-4"
       >
         {/* Booking Information */}
@@ -1372,18 +1562,28 @@ const TripDetails = () => {
                   onChange={(value) =>
                     handleFieldChange("booking", "bookingReference", value)
                   }
-                  isRequired={true}
+                  isRequired={false}
                   showGreyWhenEmpty={true}
                   className="text-sm"
                 />
-                <ReadOnlyField
+                <EditableField
                   label="Contact Email"
                   value={contactEmail}
+                  onChange={(value) =>
+                    handleFieldChange("booking", "contactEmail", value)
+                  }
+                  type="email"
+                  isRequired={false}
                   className="text-sm"
                 />
-                <ReadOnlyField
+                <EditableField
                   label="Contact Phone"
                   value={contactPhone}
+                  onChange={(value) =>
+                    handleFieldChange("booking", "contactPhone", value)
+                  }
+                  type="tel"
+                  isRequired={false}
                   className="text-sm"
                 />
               </div>
@@ -1398,84 +1598,6 @@ const TripDetails = () => {
                   </Button>
                 </div>
               )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-        {/* Flight Information */}
-        <AccordionItem value="flight-info">
-          <AccordionTrigger className="text-left py-4 sm:py-3">
-            <div className="flex items-center space-x-2">
-              <Plane className="h-5 w-5" />
-              <span className="text-sm sm:text-base">Flight Information</span>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="pt-4">
-              {/* Compact Flight Information */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                {/* Route and Schedule in one compact layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Route Information */}
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="text-center flex-1">
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                          From
-                        </div>
-                        <div className="font-semibold text-gray-900">
-                          {flight.route.from}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {flight.route.fromCode}
-                        </div>
-                      </div>
-                      <div className="flex items-center px-4">
-                        <div className="flex items-center space-x-1 text-gray-400">
-                          <div className="w-6 h-px bg-gray-300"></div>
-                          <Plane className="h-3 w-3" />
-                          <div className="w-6 h-px bg-gray-300"></div>
-                        </div>
-                      </div>
-                      <div className="text-center flex-1">
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                          To
-                        </div>
-                        <div className="font-semibold text-gray-900">
-                          {flight.route.to}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {flight.route.toCode}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Flight Schedule */}
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="text-center flex-1">
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                          Departure
-                        </div>
-                        <div className="font-semibold text-gray-900">
-                          {flight.departure}
-                        </div>
-                      </div>
-                      <div className="flex items-center px-4">
-                        <Clock className="h-3 w-3 text-gray-400" />
-                      </div>
-                      <div className="text-center flex-1">
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                          Arrival
-                        </div>
-                        <div className="font-semibold text-gray-900">
-                          {flight.arrival}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -1699,26 +1821,15 @@ const TripDetails = () => {
 
                       {/* PDF Preview */}
                       <div className="bg-white border rounded-lg mb-4 overflow-hidden">
-                        <div className="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Document Preview</span>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(document.url, '_blank')}
-                              className="flex items-center space-x-1"
-                            >
-                              <Eye className="h-3 w-3" />
-                              <span className="text-xs">Full View</span>
-                            </Button>
-                          </div>
+                        <div className="bg-gray-50 px-3 py-2 border-b flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-700">Document Preview</span>
                         </div>
-                        <div className="p-4">
+                        <div className="p-2">
                           {document.url.toLowerCase().includes('.pdf') ? (
                             <div className="w-full">
                               <iframe
                                 src={`${document.url}#toolbar=0&navpanes=0&scrollbar=0`}
-                                className="w-full h-96 border-0 rounded"
+                                className="w-full h-48 border-0 rounded"
                                 title={`Document Preview - ${document.name}`}
                                 onError={(e) => {
                                   console.error('PDF preview failed:', e);
@@ -1729,31 +1840,15 @@ const TripDetails = () => {
                                   if (fallback) fallback.style.display = 'block';
                                 }}
                               />
-                              <div className="hidden text-center py-8 bg-gray-50 rounded">
-                                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                                <p className="text-gray-600 mb-2">PDF preview not available</p>
-                                <Button
-                                  size="sm"
-                                  onClick={() => window.open(document.url, '_blank')}
-                                  className="flex items-center space-x-2"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  <span>View PDF</span>
-                                </Button>
+                              <div className="hidden text-center py-4 bg-gray-50 rounded">
+                                <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                <p className="text-gray-600 mb-2 text-sm">PDF preview not available</p>
                               </div>
                             </div>
                           ) : (
-                            <div className="text-center py-8 bg-gray-50 rounded">
-                              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                              <p className="text-gray-600 mb-2">Document preview not available</p>
-                              <Button
-                                size="sm"
-                                onClick={() => window.open(document.url, '_blank')}
-                                className="flex items-center space-x-2"
-                              >
-                                <Eye className="h-4 w-4" />
-                                <span>View Document</span>
-                              </Button>
+                            <div className="text-center py-4 bg-gray-50 rounded">
+                              <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-600 mb-2 text-sm">Document preview not available</p>
                             </div>
                           )}
                         </div>
@@ -1770,15 +1865,9 @@ const TripDetails = () => {
                           <span>Download</span>
                         </Button>
 
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(document.url, '_blank')}
-                          className="flex items-center space-x-2"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span>View Full Size</span>
-                        </Button>
+                        {(isMobile || 'share' in navigator) && (
+                          <ShareButton url={document.url} title={document.name} />
+                        )}
                       </div>
                     </CardContent>
                   </Card>
