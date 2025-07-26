@@ -208,7 +208,7 @@ const Login: React.FC = () => {
       <div className="w-full sm:w-96 md:w-80 lg:w-96">
         {/* Header Section */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Flyo Business Admin</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Flyo</h1>
           <p className="text-gray-600">Welcome back! Please sign in to continue.</p>
         </div>
 
