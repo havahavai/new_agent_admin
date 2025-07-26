@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { logout } from '../api/auth'
+import logoSvg from '../assets/logo.svg'
 
 interface LayoutProps {
   children: ReactNode
@@ -79,7 +80,7 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
             <div className="flex h-16 items-center px-4">
               <div className="flex items-center">
-                <img src="/logo.svg" alt="Flyo" className="h-6 w-6 mr-2" />
+                <img src={logoSvg} alt="Flyo" className="h-6 w-6 mr-2" />
                 <h1 className="text-xl font-bold text-gray-900">Flyo</h1>
               </div>
             </div>
@@ -127,7 +128,7 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="flex flex-1 items-center justify-between min-w-0">
             <div className="flex-1 min-w-0">
               <div className="flex items-center">
-                <img src="/logo.svg" alt="Flyo" className="h-5 w-5 mr-2" />
+                <img src={logoSvg} alt="Flyo" className="h-5 w-5 mr-2" />
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Flyo</h1>
               </div>
             </div>
