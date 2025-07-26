@@ -523,19 +523,29 @@ const TripDetails = () => {
   }, []);
 
   useEffect(() => {
+    let isCancelled = false;
+    const abortController = new AbortController();
+
     const fetchFlightDetails = async () => {
       if (!flightId) return;
 
       try {
         setLoading(true);
         setError(null);
+        console.log('TripDetails: Starting API call to getFlightDataByIds', { flightId, ticketId });
 
         // Get ticketId from URL params or search params (fallback)
         const finalTicketId = ticketId || searchParams.get("ticketId");
 
         if (finalTicketId) {
           // Try to fetch from API first
-          const response = await getFlightDataByIds(flightId, finalTicketId);
+          const response = await getFlightDataByIds(flightId, finalTicketId, abortController.signal);
+
+          // Check if component was unmounted or effect was cancelled
+          if (isCancelled) {
+            console.log('TripDetails: API call cancelled');
+            return;
+          }
 
           if ("success" in response && response.success) {
             const apiResponse = response as FlightDataByIdsResponse;
@@ -548,30 +558,45 @@ const TripDetails = () => {
               apiResponse.data
             );
             setBookingDetails(convertedBookingDetails);
+            console.log('TripDetails: API call completed successfully');
           } else {
             const errorResponse = response as ApiError;
             setError(errorResponse.message);
             // Fallback to mock data
             const details = getBookingDetails(flightId);
             setBookingDetails(details);
+            console.log('TripDetails: API call returned error:', errorResponse.message);
           }
         } else {
           // No ticketId, use mock data
           const details = getBookingDetails(flightId);
           setBookingDetails(details);
+          console.log('TripDetails: No ticketId provided, using mock data');
         }
       } catch (err) {
+        if (isCancelled || (err as Error).name === 'AbortError') {
+          console.log('TripDetails: API call was aborted');
+          return;
+        }
         console.error("Error fetching flight details:", err);
         setError("Failed to load flight details");
         // Fallback to mock data
         const details = getBookingDetails(flightId);
         setBookingDetails(details);
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchFlightDetails();
+
+    return () => {
+      console.log('TripDetails: Cleanup - aborting API call');
+      isCancelled = true;
+      abortController.abort();
+    };
   }, [flightId, ticketId, searchParams]);
 
   const handleFieldChange = (

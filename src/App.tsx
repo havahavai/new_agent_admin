@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import AuthGuard from './components/AuthGuard'
+import ApiCallMonitor from './components/ApiCallMonitor'
 import TripsWorking from './pages/TripsWorking'
 import TripDetails from './pages/TripDetails'
 import Passengers from './pages/Passengers'
@@ -14,6 +15,7 @@ import Login from './pages/Login'
 function App() {
   return (
     <Router>
+      <ApiCallMonitor />
       <Routes>
         {/* Public routes - no authentication required */}
         <Route path="/login" element={<Login />} />

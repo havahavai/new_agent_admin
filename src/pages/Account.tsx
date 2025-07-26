@@ -20,11 +20,21 @@ const Account = () => {
   })
 
   useEffect(() => {
+    let isCancelled = false
+    const abortController = new AbortController()
+
     const fetchUserInfo = async () => {
       try {
         setLoading(true)
         setError(null)
-        const response = await getB2BUserInfo()
+        console.log('Account: Starting API call to getB2BUserInfo')
+        const response = await getB2BUserInfo(abortController.signal)
+
+        // Check if component was unmounted or effect was cancelled
+        if (isCancelled) {
+          console.log('Account: API call cancelled')
+          return
+        }
 
         if ('success' in response && response.success) {
           const userResponse = response as B2BUserResponse
@@ -37,21 +47,35 @@ const Account = () => {
             checkInPreference: userResponse.data.checkInPreference
           })
           setBalance(parseFloat(userResponse.data.currentBalance))
+          console.log('Account: API call completed successfully')
         } else {
           const errorResponse = response as ApiError
           setError(errorResponse.message)
+          console.log('Account: API call returned error:', errorResponse.message)
           // Keep default values
         }
       } catch (err) {
+        if (isCancelled || (err as Error).name === 'AbortError') {
+          console.log('Account: API call was aborted')
+          return
+        }
         console.error('Error fetching user info:', err)
         setError('Failed to load user information')
         // Keep default values
       } finally {
-        setLoading(false)
+        if (!isCancelled) {
+          setLoading(false)
+        }
       }
     }
 
     fetchUserInfo()
+
+    return () => {
+      console.log('Account: Cleanup - aborting API call')
+      isCancelled = true
+      abortController.abort()
+    }
   }, [])
 
 

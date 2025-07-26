@@ -33,30 +33,54 @@ const Passengers = () => {
 
   // Fetch passengers from API
   useEffect(() => {
+    let isCancelled = false
+    const abortController = new AbortController()
+
     const fetchPassengers = async () => {
       try {
         setLoading(true)
         setError(null)
-        const response = await getUsersPassengerDetails()
+        console.log('Passengers: Starting API call to getUsersPassengerDetails')
+        const response = await getUsersPassengerDetails(abortController.signal)
+
+        // Check if component was unmounted or effect was cancelled
+        if (isCancelled) {
+          console.log('Passengers: API call cancelled')
+          return
+        }
 
         if ('data' in response) {
           const passengerResponse = response as PassengerDetailsResponse
           setApiPassengers(passengerResponse.data)
+          console.log('Passengers: API call completed successfully')
         } else {
           const errorResponse = response as ApiError
           setError(errorResponse.message)
           setApiPassengers([]) // Clear any existing data
+          console.log('Passengers: API call returned error:', errorResponse.message)
         }
       } catch (err) {
+        if (isCancelled || (err as Error).name === 'AbortError') {
+          console.log('Passengers: API call was aborted')
+          return
+        }
         console.error('Error fetching passengers:', err)
         setError('Failed to load passenger information')
         setApiPassengers([]) // Clear any existing data
       } finally {
-        setLoading(false)
+        if (!isCancelled) {
+          setLoading(false)
+        }
       }
     }
 
     fetchPassengers()
+
+    return () => {
+      console.log('Passengers: Cleanup - aborting API call')
+      isCancelled = true
+      abortController.abort()
+    }
   }, [])
 
   // Convert API data to component format

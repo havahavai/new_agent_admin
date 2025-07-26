@@ -173,11 +173,21 @@ const TripsWorking = () => {
 
   // Fetch flights from API
   useEffect(() => {
+    let isCancelled = false
+    const abortController = new AbortController()
+
     const fetchFlights = async () => {
       try {
         setLoading(true)
         setError(null)
-        const response = await getUserSpecificInfo()
+        console.log('TripsWorking: Starting API call to getUserSpecificInfo')
+        const response = await getUserSpecificInfo(abortController.signal)
+
+        // Check if component was unmounted or effect was cancelled
+        if (isCancelled) {
+          console.log('TripsWorking: API call cancelled')
+          return
+        }
 
         if ('success' in response && response.success) {
           const userResponse = response as UserSpecificInfoResponse
@@ -190,6 +200,7 @@ const TripsWorking = () => {
           // Set initial date to first date with flights or today if no flights
           const firstDateWithFlights = findFirstDateWithFlights(carouselData)
           setSelectedDate(firstDateWithFlights)
+          console.log('TripsWorking: API call completed successfully')
         } else {
           const errorResponse = response as ApiError
           setError(errorResponse.message)
@@ -199,8 +210,13 @@ const TripsWorking = () => {
           setDateCarouselData(carouselData)
           // Set selected date to today when no flights
           setSelectedDate(new Date())
+          console.log('TripsWorking: API call returned error:', errorResponse.message)
         }
       } catch (err) {
+        if (isCancelled || (err as Error).name === 'AbortError') {
+          console.log('TripsWorking: API call was aborted')
+          return
+        }
         console.error('Error fetching flights:', err)
         setError('Failed to load flights')
         setApiFlights([])
@@ -210,11 +226,10 @@ const TripsWorking = () => {
         // Set selected date to today when no flights
         setSelectedDate(new Date())
       } finally {
-        // Add a small delay to ensure state updates are processed
-        setTimeout(() => {
+        if (!isCancelled) {
           setLoading(false)
-          console.log('Loading state set to false')
-        }, 100)
+          console.log('TripsWorking: Loading state set to false')
+        }
       }
     }
 
@@ -224,6 +239,8 @@ const TripsWorking = () => {
     console.log('TripsWorking component mounted')
     return () => {
       console.log('TripsWorking component unmounted')
+      isCancelled = true
+      abortController.abort()
     }
   }, [])
 

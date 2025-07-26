@@ -99,7 +99,7 @@ const PassengerDetails = () => {
   })
 
   // Function to fetch passenger details from API
-  const fetchPassengerDetails = async () => {
+  const fetchPassengerDetails = async (signal?: AbortSignal) => {
       try {
         setLoading(true)
         setError(null)
@@ -107,7 +107,14 @@ const PassengerDetails = () => {
         // If passengerId is provided, use the specific API to get passenger by ID
         if (passengerId) {
           const passengerIdNumber = passengerId.replace('P', '')
-          const response = await getPassengerDetailById(passengerIdNumber)
+          console.log('PassengerDetails: Starting API call to getPassengerDetailById', passengerIdNumber)
+          const response = await getPassengerDetailById(passengerIdNumber, signal)
+
+          // Check if request was aborted
+          if (signal?.aborted) {
+            console.log('PassengerDetails: API call was aborted')
+            return
+          }
 
           if ('data' in response) {
             const passengerData = response.data
@@ -143,11 +150,13 @@ const PassengerDetails = () => {
               documentUrl: document?.documentUrl || '',
               seatPreferences: passengerData.seatPreferences
             })
+            console.log('PassengerDetails: API call completed successfully')
             setLoading(false)
             return
           } else {
             const errorResponse = response as ApiError
             setError(errorResponse.message)
+            console.log('PassengerDetails: API call returned error:', errorResponse.message)
             setLoading(false)
             return
           }
@@ -158,10 +167,16 @@ const PassengerDetails = () => {
         setLoading(false)
         return
       } catch (err) {
+        if ((err as Error).name === 'AbortError') {
+          console.log('PassengerDetails: API call was aborted')
+          return
+        }
         console.error('Error fetching passenger details:', err)
         setError('Failed to load passenger details')
       } finally {
-        setLoading(false)
+        if (!signal?.aborted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -199,7 +214,14 @@ const PassengerDetails = () => {
 
   // Fetch passenger details from API
   useEffect(() => {
-    fetchPassengerDetails()
+    const abortController = new AbortController()
+
+    fetchPassengerDetails(abortController.signal)
+
+    return () => {
+      console.log('PassengerDetails: Cleanup - aborting API call')
+      abortController.abort()
+    }
   }, [passengerId])
 
 
