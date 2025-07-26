@@ -48,7 +48,6 @@ export interface BoardingPass {
   barcode: string;
   qrCode: string;
   issuedAt: string;
-  boardingPassUrl?: string; // URL to the actual boarding pass from API
 }
 
 export interface TicketDocument {
