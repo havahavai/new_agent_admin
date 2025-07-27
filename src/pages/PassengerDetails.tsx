@@ -629,17 +629,6 @@ const PassengerDetails = () => {
             <div className="flex items-start justify-between">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{passenger.name}</h1>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-gray-600">
-                  <p>Passenger ID: <span className="font-semibold text-gray-900">{passenger.id}</span></p>
-                  <p className="flex items-center space-x-1">
-                    <span>•</span>
-                    <span>{passenger.numberOfFlights} flight{passenger.numberOfFlights !== 1 ? 's' : ''}</span>
-                  </p>
-                  <p className="flex items-center space-x-1">
-                    <span>•</span>
-                    <span>{passenger.mainPassenger ? 'Primary' : 'Secondary'} passenger</span>
-                  </p>
-                </div>
               </div>
               <div className="flex items-center">
                 <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
@@ -934,50 +923,10 @@ const PassengerDetails = () => {
                 </div>
               </div>
 
-              {/* Document Preview Section */}
-              {passenger.hasDocuments && passenger.documentUrl && (
-                <div className="border-t pt-4">
-                  <label className="text-sm font-medium text-gray-700">Document Preview</label>
-                  <div className="mt-2 p-4 border-2 border-dashed border-gray-300 rounded-lg">
-                    <div className="flex items-center justify-center space-x-2">
-                      <FileText className="h-8 w-8 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {passenger.documentType || 'passport'}_document.pdf
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Document ID: {passenger.passengerFlightId}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Number: {passenger.passportNumber}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex justify-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadDocument(passenger.documentUrl)}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDocument(passenger.documentUrl)}
-                      >
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Passport Management Section */}
+              {/* Passport Details Management */}
               <div className="border-t pt-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-gray-900">Passport Management</h4>
+                  <h4 className="font-medium text-gray-900">Passport Details</h4>
                   <div className="flex gap-2">
                     {!isPassportEditMode ? (
                       <Button
@@ -1034,39 +983,145 @@ const PassengerDetails = () => {
                   </div>
                 )}
               </div>
-              {/* Document Upload Section */}
+
+              {/* Passport Document Section */}
               <div className="border-t pt-4">
-                <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1 mb-3">Upload Document</h4>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                  <input
-                    type="file"
-                    id="document-upload"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('document-upload')?.click()}
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        {passenger.hasDocuments ? 'Replace Document' : 'Upload Passport'}
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-sm text-gray-500">
-                    Supported formats: PDF, JPG, PNG (Max 5MB)
-                  </p>
-                </div>
+                <h4 className="font-medium text-gray-900 border-b border-gray-200 pb-1 mb-3">Passport Document</h4>
+
+                {passenger.hasDocuments && passenger.documentUrl ? (
+                  <div className="space-y-4">
+                    {/* Passport Preview */}
+                    <div className="bg-white border rounded-lg overflow-hidden">
+                      <div className="bg-gray-50 px-3 py-2 border-b">
+                        <span className="text-xs font-medium text-gray-700">Passport Preview</span>
+                      </div>
+                      <div className="p-2">
+                        {passenger.documentUrl.toLowerCase().includes('.pdf') ? (
+                          <div className="w-full">
+                            <iframe
+                              src={`${passenger.documentUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                              className="w-full h-96 border-0 rounded"
+                              title={`Passport Document Preview - ${passenger.name}`}
+                              onError={(e) => {
+                                console.error('PDF preview failed:', e);
+                                const iframe = e.target as HTMLIFrameElement;
+                                iframe.style.display = 'none';
+                                const fallback = iframe.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'block';
+                              }}
+                            />
+                            <div className="hidden text-center py-8 bg-gray-50 rounded">
+                              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                              <p className="text-gray-600 mb-2">PDF preview not available</p>
+                              <p className="text-sm text-gray-500 mb-4">
+                                The document cannot be previewed in this browser
+                              </p>
+                            </div>
+                          </div>
+                        ) : passenger.documentUrl.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                          <div className="w-full">
+                            <img
+                              src={passenger.documentUrl}
+                              alt={`Passport Document - ${passenger.name}`}
+                              className="w-full h-96 object-contain bg-gray-50 rounded"
+                              onError={(e) => {
+                                console.error('Image preview failed:', e);
+                                const img = e.target as HTMLImageElement;
+                                img.style.display = 'none';
+                                const fallback = img.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'block';
+                              }}
+                            />
+                            <div className="hidden text-center py-8 bg-gray-50 rounded">
+                              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                              <p className="text-gray-600 mb-2">Image preview not available</p>
+                              <p className="text-sm text-gray-500 mb-4">
+                                The image cannot be displayed in this browser
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 bg-gray-50 rounded">
+                            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 mb-2">Document preview not available</p>
+                            <p className="text-sm text-gray-500 mb-4">
+                              Preview is only available for PDF and image files
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-center space-x-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDownloadDocument(passenger.documentUrl)}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                      <input
+                        type="file"
+                        id="passport-replace"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => document.getElementById('passport-replace')?.click()}
+                        disabled={uploading}
+                      >
+                        {uploading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Replace
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 mb-2">No passport uploaded</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Upload your passport document to continue
+                    </p>
+                    <input
+                      type="file"
+                      id="passport-upload"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      onClick={() => document.getElementById('passport-upload')?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload Passport
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
+
+
             </div>
           </AccordionContent>
         </AccordionItem>
