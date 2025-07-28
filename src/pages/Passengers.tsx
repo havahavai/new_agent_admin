@@ -1,24 +1,52 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-
+import { Checkbox } from '@/components/ui/checkbox'
+import { MemoizedCheckbox } from '@/components/ui/MemoizedCheckbox'
+import { PassengerTableRow } from '@/components/PassengerTableRow'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { User, FileCheck, FileX, Search, ChevronUp, ChevronDown } from 'lucide-react'
-import { useState, useEffect, useMemo } from 'react'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { User, FileCheck, FileX, Search, ChevronUp, ChevronDown, Trash2, Users, AlertTriangle } from 'lucide-react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError } from '@/api'
+import { deleteMultiplePassengers } from '@/api/deletePassenger'
+import { mergePassengers } from '@/api/mergePassengers'
 
 const Passengers = () => {
   const navigate = useNavigate()
   const [isMobile, setIsMobile] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [documentFilter, setDocumentFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [apiPassengers, setApiPassengers] = useState<PassengerDetail[]>([])
-  const [sortField, setSortField] = useState<'name' | 'numberOfFlights' | null>(null)
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [sortField, setSortField] = useState<'name' | 'firstName' | 'lastName' | 'numberOfFlights' | null>('numberOfFlights')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  // Selection state
+  const [selectedPassengers, setSelectedPassengers] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isMerging, setIsMerging] = useState(false)
+
+  // Dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showMergeDialog, setShowMergeDialog] = useState(false)
+
+  // Merge state
+  const [mergeData, setMergeData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: '',
+    nationality: '',
+    countryOfResidence: ''
+  })
 
   useEffect(() => {
     const checkMobile = () => {
@@ -30,6 +58,15 @@ const Passengers = () => {
 
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // Debounce search query to improve performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   // Fetch passengers from API
   useEffect(() => {
@@ -106,6 +143,8 @@ const Passengers = () => {
       return {
         id: `P${passenger.passengerId}`,
         name: `${processedFirstName} ${processedLastName}`.trim(),
+        firstName: processedFirstName,
+        lastName: processedLastName,
         email: 'N/A', // API doesn't provide email
         flightNumber: `FL${passenger.passengerFlightId}`, // Use passengerFlightId
         seatNumber: 'N/A', // API doesn't provide seat number
@@ -122,12 +161,131 @@ const Passengers = () => {
 
 
   // Handle sorting
-  const handleSort = (field: 'name' | 'numberOfFlights') => {
+  const handleSort = (field: 'name' | 'firstName' | 'lastName' | 'numberOfFlights') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
       setSortField(field)
       setSortDirection('asc')
+    }
+  }
+
+  // Optimized selection handlers with useCallback and immediate state update
+  const handleSelectPassenger = useCallback((passengerId: string, checked: boolean) => {
+    // Use functional update to ensure we have the latest state
+    setSelectedPassengers(prev => {
+      const newSelected = new Set(prev)
+      if (checked) {
+        newSelected.add(passengerId)
+      } else {
+        newSelected.delete(passengerId)
+      }
+      return newSelected
+    })
+  }, [])
+
+  // Create memoized handlers for each passenger to prevent unnecessary re-renders
+  const createPassengerHandler = useCallback((passengerId: string) => {
+    return (checked: boolean) => handleSelectPassenger(passengerId, checked)
+  }, [handleSelectPassenger])
+
+
+
+  // Delete handlers
+  const handleDeleteSelected = () => {
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDelete = async () => {
+    try {
+      setIsDeleting(true)
+      const passengerIds = Array.from(selectedPassengers).map(id => id.replace('P', ''))
+
+      const result = await deleteMultiplePassengers(passengerIds)
+
+      if ('success' in result && result.success) {
+        // Refresh the passenger list
+        const response = await getUsersPassengerDetails()
+        if ('data' in response) {
+          setApiPassengers(response.data)
+        }
+        setSelectedPassengers(new Set())
+        setShowDeleteDialog(false)
+      } else {
+        setError(result.message || 'Failed to delete passengers')
+      }
+    } catch (err) {
+      console.error('Error deleting passengers:', err)
+      setError('Failed to delete passengers')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Merge handlers
+  const handleMergeSelected = () => {
+    // Pre-populate merge data with data from selected passengers
+    const selectedPassengerData = passengers.filter(p => selectedPassengers.has(p.id))
+    if (selectedPassengerData.length > 0) {
+      const firstPassenger = selectedPassengerData[0]
+      setMergeData({
+        firstName: firstPassenger.name.split(' ')[0] || '',
+        lastName: firstPassenger.name.split(' ').slice(1).join(' ') || '',
+        email: '',
+        phone: '',
+        dateOfBirth: '',
+        gender: '',
+        nationality: firstPassenger.nationality || '',
+        countryOfResidence: ''
+      })
+    }
+    setShowMergeDialog(true)
+  }
+
+  const confirmMerge = async () => {
+    try {
+      setIsMerging(true)
+      const selectedIds = Array.from(selectedPassengers)
+      const primaryId = selectedIds[0].replace('P', '')
+      const secondaryIds = selectedIds.slice(1).map(id => id.replace('P', ''))
+
+      const result = await mergePassengers(primaryId, secondaryIds, {
+        firstName: mergeData.firstName,
+        lastName: mergeData.lastName,
+        mobileNumber: mergeData.phone,
+        email: mergeData.email,
+        dateOfBirth: mergeData.dateOfBirth,
+        gender: mergeData.gender,
+        nationality: mergeData.nationality,
+        countryOfResidence: mergeData.countryOfResidence
+      })
+
+      if ('success' in result && result.success) {
+        // Refresh the passenger list
+        const response = await getUsersPassengerDetails()
+        if ('data' in response) {
+          setApiPassengers(response.data)
+        }
+        setSelectedPassengers(new Set())
+        setShowMergeDialog(false)
+        setMergeData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          dateOfBirth: '',
+          gender: '',
+          nationality: '',
+          countryOfResidence: ''
+        })
+      } else {
+        setError(result.message || 'Failed to merge passengers')
+      }
+    } catch (err) {
+      console.error('Error merging passengers:', err)
+      setError('Failed to merge passengers')
+    } finally {
+      setIsMerging(false)
     }
   }
 
@@ -137,18 +295,21 @@ const Passengers = () => {
       // Exclude passengers with null or empty names
       const hasValidName = passenger.name && passenger.name.trim() !== ''
 
-      // Search filter
-      const matchesSearch = searchQuery === '' ||
-        passenger.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        passenger.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        passenger.flightNumber.toLowerCase().includes(searchQuery.toLowerCase())
+      // Search filter - optimized with early return
+      if (debouncedSearchQuery !== '') {
+        const query = debouncedSearchQuery.toLowerCase()
+        const matchesSearch = passenger.name.toLowerCase().includes(query) ||
+          passenger.email.toLowerCase().includes(query) ||
+          passenger.flightNumber.toLowerCase().includes(query)
+        if (!matchesSearch) return false
+      }
 
       // Document filter
       const matchesDocument = documentFilter === 'all' ||
         (documentFilter === 'with-documents' && passenger.hasDocuments) ||
         (documentFilter === 'without-documents' && !passenger.hasDocuments)
 
-      return hasValidName && matchesSearch && matchesDocument
+      return hasValidName && matchesDocument
     })
 
     // Apply sorting
@@ -160,6 +321,12 @@ const Passengers = () => {
         if (sortField === 'name') {
           aValue = a.name.toLowerCase()
           bValue = b.name.toLowerCase()
+        } else if (sortField === 'firstName') {
+          aValue = a.firstName.toLowerCase()
+          bValue = b.firstName.toLowerCase()
+        } else if (sortField === 'lastName') {
+          aValue = a.lastName.toLowerCase()
+          bValue = b.lastName.toLowerCase()
         } else if (sortField === 'numberOfFlights') {
           aValue = a.numberOfFlights || 0
           bValue = b.numberOfFlights || 0
@@ -178,13 +345,33 @@ const Passengers = () => {
     }
 
     return filtered
-  }, [passengers, searchQuery, documentFilter, sortField, sortDirection])
+  }, [passengers, debouncedSearchQuery, documentFilter, sortField, sortDirection])
 
-  // Calculate statistics
-  const totalPassengers = passengers.length
-  const passengersWithDocuments = passengers.filter(p => p.hasDocuments).length
-  const passengersWithoutDocuments = passengers.filter(p => !p.hasDocuments).length
-  const totalFlights = passengers.reduce((sum, passenger) => sum + (passenger.numberOfFlights || 0), 0)
+  // Handle select all functionality
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(filteredPassengers.map(p => p.id))
+      setSelectedPassengers(allIds)
+    } else {
+      setSelectedPassengers(new Set())
+    }
+  }, [filteredPassengers])
+
+  // Memoized selection state calculations
+  const selectionState = useMemo(() => {
+    const isAllSelected = filteredPassengers.length > 0 && selectedPassengers.size === filteredPassengers.length
+    const isIndeterminate = selectedPassengers.size > 0 && selectedPassengers.size < filteredPassengers.length
+    return { isAllSelected, isIndeterminate }
+  }, [filteredPassengers.length, selectedPassengers.size])
+
+  // Memoized statistics calculations
+  const statistics = useMemo(() => {
+    const totalPassengers = passengers.length
+    const passengersWithDocuments = passengers.filter(p => p.hasDocuments).length
+    const passengersWithoutDocuments = passengers.filter(p => !p.hasDocuments).length
+    const totalFlights = passengers.reduce((sum, passenger) => sum + (passenger.numberOfFlights || 0), 0)
+    return { totalPassengers, passengersWithDocuments, passengersWithoutDocuments, totalFlights }
+  }, [passengers])
 
   if (loading) {
     return (
@@ -212,41 +399,7 @@ const Passengers = () => {
         </div>
       )}
 
-      {/* Stats Cards - Hidden on mobile */}
-      {!isMobile && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Passengers</CardTitle>
-              <User className="h-4 w-4 text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPassengers}</div>
-              <p className="text-xs text-gray-600">Current passengers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Passengers with Documents</CardTitle>
-              <FileCheck className="h-4 w-4 text-green-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{passengersWithDocuments}</div>
-              <p className="text-xs text-green-600">{totalPassengers > 0 ? Math.round((passengersWithDocuments / totalPassengers) * 100) : 0}% of total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Passengers without Documents</CardTitle>
-              <FileX className="h-4 w-4 text-red-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{passengersWithoutDocuments}</div>
-              <p className="text-xs text-red-600">{totalPassengers > 0 ? Math.round((passengersWithoutDocuments / totalPassengers) * 100) : 0}% of total</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+
 
       <Card>
         <CardHeader>
@@ -286,114 +439,284 @@ const Passengers = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Bulk Action Buttons */}
+              {selectedPassengers.size > 0 && (
+                <div className="flex flex-col sm:flex-row gap-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center text-sm text-blue-700 font-medium">
+                    {selectedPassengers.size} passenger{selectedPassengers.size !== 1 ? 's' : ''} selected
+                  </div>
+                  <div className="flex gap-2 sm:ml-auto">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteSelected()}
+                      disabled={isDeleting}
+                      className="flex items-center space-x-1"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>{isDeleting ? 'Deleting...' : 'Delete Selected'}</span>
+                    </Button>
+                    {selectedPassengers.size >= 2 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMergeSelected()}
+                        disabled={isMerging}
+                        className="flex items-center space-x-1"
+                      >
+                        <Users className="h-4 w-4" />
+                        <span>{isMerging ? 'Merging...' : 'Merge Selected'}</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {isMobile ? (
             // Mobile Card Layout
             <div className="space-y-4">
               {filteredPassengers.map((passenger) => (
                 <div
                   key={passenger.id}
-                  className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => navigate(`/passengers/${passenger.id}`)}
+                  className="border rounded-lg p-4 space-y-3 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center space-x-2">
-                    <div className="font-medium text-gray-900">{passenger.name}</div>
-                    {!passenger.hasDocuments && (
-                      <FileX className="h-4 w-4 text-red-500" />
-                    )}
+                  <div className="flex items-center justify-between">
+                    <div
+                      className="flex items-center space-x-2 cursor-pointer flex-1"
+                      onClick={() => navigate(`/passengers/${passenger.id}`)}
+                    >
+                      <div className="font-medium text-gray-900">{passenger.name}</div>
+                      {!passenger.hasDocuments && (
+                        <FileX className="h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                    <MemoizedCheckbox
+                      checked={selectedPassengers.has(passenger.id)}
+                      onCheckedChange={createPassengerHandler(passenger.id)}
+                      ariaLabel={`Select ${passenger.name}`}
+                    />
                   </div>
-                  <div className="text-sm text-gray-600">
-                    <span>{passenger.numberOfFlights || 0} flight{(passenger.numberOfFlights || 0) !== 1 ? 's' : ''}</span>
-                  </div>
+                  {!passenger.hasDocuments && (
+                    <div className="text-sm">
+                      <Badge variant="destructive" className="text-xs">Document Missing</Badge>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
-            // Desktop Table Layout
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      <button
-                        onClick={() => handleSort('name')}
-                        className="flex items-center space-x-1 hover:text-gray-900 transition-colors"
-                      >
-                        <span>Name</span>
-                        {sortField === 'name' ? (
-                          sortDirection === 'asc' ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )
-                        ) : (
-                          <ChevronUp className="h-4 w-4 opacity-30" />
-                        )}
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        onClick={() => handleSort('numberOfFlights')}
-                        className="flex items-center space-x-1 hover:text-gray-900 transition-colors"
-                      >
-                        <span>Number of Flights</span>
-                        {sortField === 'numberOfFlights' ? (
-                          sortDirection === 'asc' ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )
-                        ) : (
-                          <ChevronUp className="h-4 w-4 opacity-30" />
-                        )}
-                      </button>
-                    </TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPassengers.map((passenger) => (
-                    <TableRow
-                      key={passenger.id}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => navigate(`/passengers/${passenger.id}`)}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center space-x-2">
-                          <span>{passenger.name}</span>
-                          {!passenger.hasDocuments && (
-                            <Badge variant="destructive" className="ml-2">Missing Documents</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-gray-600">
-                          <span>{passenger.numberOfFlights || 0} flight{(passenger.numberOfFlights || 0) !== 1 ? 's' : ''}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              navigate(`/passengers/${passenger.id}`)
-                            }}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            // Desktop Table Layout with Stats Cards
+            <div className="flex gap-6">
+              {/* Table Container */}
+              <div className="flex-1">
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="relative max-h-96 overflow-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                        <TableRow>
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={selectionState.isAllSelected}
+                              onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                              aria-label="Select all passengers"
+                            />
+                          </TableHead>
+                          <TableHead>
+                            <button
+                              onClick={() => handleSort('firstName')}
+                              className="flex items-center space-x-1 hover:text-gray-900 transition-colors"
+                            >
+                              <span>First Name</span>
+                              {sortField === 'firstName' ? (
+                                sortDirection === 'asc' ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )
+                              ) : (
+                                <ChevronUp className="h-4 w-4 opacity-30" />
+                              )}
+                            </button>
+                          </TableHead>
+                          <TableHead>
+                            <button
+                              onClick={() => handleSort('lastName')}
+                              className="flex items-center space-x-1 hover:text-gray-900 transition-colors"
+                            >
+                              <span>Last Name</span>
+                              {sortField === 'lastName' ? (
+                                sortDirection === 'asc' ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )
+                              ) : (
+                                <ChevronUp className="h-4 w-4 opacity-30" />
+                              )}
+                            </button>
+                          </TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPassengers.map((passenger) => (
+                          <PassengerTableRow
+                            key={passenger.id}
+                            passenger={passenger}
+                            isSelected={selectedPassengers.has(passenger.id)}
+                            onSelectionChange={createPassengerHandler(passenger.id)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Cards - Vertical Layout on Right */}
+              <div className="w-64 space-y-3">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+                    <CardTitle className="text-xs font-medium text-gray-600">Total Passengers</CardTitle>
+                    <User className="h-3 w-3 text-gray-400" />
+                  </CardHeader>
+                  <CardContent className="pt-1">
+                    <div className="text-xl font-bold">{statistics.totalPassengers}</div>
+                    <p className="text-xs text-gray-600">Current passengers</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+                    <CardTitle className="text-xs font-medium text-gray-600">With Documents</CardTitle>
+                    <FileCheck className="h-3 w-3 text-green-400" />
+                  </CardHeader>
+                  <CardContent className="pt-1">
+                    <div className="text-xl font-bold">{statistics.passengersWithDocuments}</div>
+                    <p className="text-xs text-green-600">{statistics.totalPassengers > 0 ? Math.round((statistics.passengersWithDocuments / statistics.totalPassengers) * 100) : 0}% of total</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+                    <CardTitle className="text-xs font-medium text-gray-600">Missing Documents</CardTitle>
+                    <FileX className="h-3 w-3 text-red-400" />
+                  </CardHeader>
+                  <CardContent className="pt-1">
+                    <div className="text-xl font-bold">{statistics.passengersWithoutDocuments}</div>
+                    <p className="text-xs text-red-600">{statistics.totalPassengers > 0 ? Math.round((statistics.passengersWithoutDocuments / statistics.totalPassengers) * 100) : 0}% of total</p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           )}
             </>
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Delete {selectedPassengers.size} Passenger{selectedPassengers.size !== 1 ? 's' : ''}?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mt-2">
+              This action cannot be undone. The selected passenger{selectedPassengers.size !== 1 ? 's' : ''} will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Passengers Dialog */}
+      <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <Users className="h-6 w-6 text-blue-600" />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Merge {selectedPassengers.size} Passengers
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mt-2">
+              Combine selected passengers into one record. Fill in the details below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-6">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="firstName" className="text-sm font-medium">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={mergeData.firstName}
+                  onChange={(e) => setMergeData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName" className="text-sm font-medium">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={mergeData.lastName}
+                  onChange={(e) => setMergeData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={mergeData.email}
+                onChange={(e) => setMergeData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowMergeDialog(false)}
+              disabled={isMerging}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmMerge}
+              disabled={isMerging || !mergeData.firstName || !mergeData.lastName}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              {isMerging ? 'Merging...' : 'Merge'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

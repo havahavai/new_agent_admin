@@ -11,4 +11,6 @@ export * from "./updatePassport";
 export * from "./updateTicket";
 export * from "./userCheckinPreference";
 export * from "./passengerCheckinPreference";
+export * from "./deletePassenger";
+export * from "./mergePassengers";
 export * from "./utils";
