@@ -13,4 +13,5 @@ export * from "./userCheckinPreference";
 export * from "./passengerCheckinPreference";
 export * from "./deletePassenger";
 export * from "./mergePassengers";
+export * from "./addPassenger";
 export * from "./utils";

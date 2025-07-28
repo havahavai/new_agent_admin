@@ -1,10 +1,22 @@
 import { API_BASE_URL, handleNetworkError } from "./utils";
-import {
-  ApiError,
-  getJwtToken,
-} from "./types";
+import { ApiError, getJwtToken } from "./types";
 
-// Delete Passenger API Types
+// New Bulk Delete Passengers API Types (based on user requirements)
+export interface BulkDeletePassengersRequest {
+  type: "INDIVIDUAL_PASSENGER";
+  operationType: "DELETE";
+  body: {
+    passengerIds: number[];
+  };
+}
+
+export interface BulkDeletePassengersResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// Legacy Delete Passenger API Types (keeping for backward compatibility)
 export interface DeletePassengerRequest {
   type: "INDIVIDUAL_PASSENGER";
   operationType: "DELETE";
@@ -119,9 +131,9 @@ export const deleteMultiplePassengers = async (
     for (const passengerId of passengerIds) {
       const result = await deletePassenger(passengerId);
       results.push(result);
-      
+
       // If any deletion fails, return the error
-      if (!('success' in result) || !result.success) {
+      if (!("success" in result) || !result.success) {
         return result;
       }
     }
@@ -133,6 +145,82 @@ export const deleteMultiplePassengers = async (
     };
   } catch (error) {
     console.error("Delete multiple passengers error:", error);
+    return handleNetworkError(error);
+  }
+};
+
+/**
+ * New bulk delete passengers API function (based on user requirements)
+ * Uses the DELETE operation with passengerIds array
+ */
+export const bulkDeletePassengers = async (
+  passengerIds: number[]
+): Promise<BulkDeletePassengersResponse | ApiError> => {
+  try {
+    const jwtToken = getJwtToken();
+
+    if (!jwtToken) {
+      return {
+        success: false,
+        message: "Authentication token not found. Please login again.",
+      };
+    }
+
+    // Validate required fields
+    if (!passengerIds || passengerIds.length === 0) {
+      return {
+        success: false,
+        message: "At least one passenger ID is required.",
+      };
+    }
+
+    const requestBody: BulkDeletePassengersRequest = {
+      type: "INDIVIDUAL_PASSENGER",
+      operationType: "DELETE",
+      body: {
+        passengerIds,
+      },
+    };
+
+    console.log("Bulk delete passengers API request:", requestBody);
+
+    const response = await fetch(
+      `https://prod-api.flyo.ai/core/v1/admin/update`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        "Bulk delete passengers API error:",
+        response.status,
+        errorText
+      );
+
+      return {
+        success: false,
+        message: `Failed to delete passengers: ${response.status} ${response.statusText}`,
+        error: errorText,
+      };
+    }
+
+    const data = await response.json();
+    console.log("Bulk delete passengers API response:", data);
+
+    return {
+      success: true,
+      message: `Successfully deleted ${passengerIds.length} passenger(s)`,
+      data,
+    };
+  } catch (error) {
+    console.error("Bulk delete passengers error:", error);
     return handleNetworkError(error);
   }
 };

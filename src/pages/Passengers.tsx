@@ -11,9 +11,10 @@ import { User, FileCheck, FileX, Search, ChevronUp, ChevronDown, Trash2, Users, 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
-import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError } from '@/api'
-import { deleteMultiplePassengers } from '@/api/deletePassenger'
-import { mergePassengers } from '@/api/mergePassengers'
+import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError, GetUserId, getJwtToken } from '@/api'
+import { bulkDeletePassengers } from '@/api/deletePassenger'
+import { newMergePassengers } from '@/api/mergePassengers'
+import { addPassenger } from '@/api/addPassenger'
 
 const Passengers = () => {
   const navigate = useNavigate()
@@ -31,10 +32,12 @@ const Passengers = () => {
   const [selectedPassengers, setSelectedPassengers] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
   const [isMerging, setIsMerging] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
 
   // Dialog states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showMergeDialog, setShowMergeDialog] = useState(false)
+  const [showAddDialog, setShowAddDialog] = useState(false)
 
   // Merge state
   const [mergeData, setMergeData] = useState({
@@ -46,6 +49,13 @@ const Passengers = () => {
     gender: '',
     nationality: '',
     countryOfResidence: ''
+  })
+
+  // Add passenger state
+  const [addData, setAddData] = useState({
+    firstName: '',
+    lastName: '',
+    email: ''
   })
 
   useEffect(() => {
@@ -199,9 +209,9 @@ const Passengers = () => {
   const confirmDelete = async () => {
     try {
       setIsDeleting(true)
-      const passengerIds = Array.from(selectedPassengers).map(id => id.replace('P', ''))
+      const passengerIds = Array.from(selectedPassengers).map(id => parseInt(id.replace('P', '')))
 
-      const result = await deleteMultiplePassengers(passengerIds)
+      const result = await bulkDeletePassengers(passengerIds)
 
       if ('success' in result && result.success) {
         // Refresh the passenger list
@@ -246,19 +256,21 @@ const Passengers = () => {
     try {
       setIsMerging(true)
       const selectedIds = Array.from(selectedPassengers)
-      const primaryId = selectedIds[0].replace('P', '')
-      const secondaryIds = selectedIds.slice(1).map(id => id.replace('P', ''))
+      const passengerIds = selectedIds.map(id => parseInt(id.replace('P', '')))
 
-      const result = await mergePassengers(primaryId, secondaryIds, {
-        firstName: mergeData.firstName,
-        lastName: mergeData.lastName,
-        mobileNumber: mergeData.phone,
-        email: mergeData.email,
-        dateOfBirth: mergeData.dateOfBirth,
-        gender: mergeData.gender,
-        nationality: mergeData.nationality,
-        countryOfResidence: mergeData.countryOfResidence
-      })
+      // Get userId from JWT token
+      const jwtToken = getJwtToken()
+      const userId = GetUserId(jwtToken)
+
+      const result = await newMergePassengers(
+        passengerIds,
+        {
+          firstName: mergeData.firstName,
+          lastName: mergeData.lastName,
+          email: mergeData.email,
+        },
+        userId.toString()
+      )
 
       if ('success' in result && result.success) {
         // Refresh the passenger list
@@ -286,6 +298,54 @@ const Passengers = () => {
       setError('Failed to merge passengers')
     } finally {
       setIsMerging(false)
+    }
+  }
+
+  // Add passenger handlers
+  const handleAddPassenger = () => {
+    setAddData({
+      firstName: '',
+      lastName: '',
+      email: ''
+    })
+    setShowAddDialog(true)
+  }
+
+  const confirmAddPassenger = async () => {
+    try {
+      setIsAdding(true)
+
+      // Get userId from JWT token
+      const jwtToken = getJwtToken()
+      const userId = GetUserId(jwtToken)
+
+      const result = await addPassenger(
+        addData.firstName,
+        addData.lastName,
+        addData.email,
+        userId.toString()
+      )
+
+      if ('success' in result && result.success) {
+        // Refresh the passenger list
+        const response = await getUsersPassengerDetails()
+        if ('data' in response) {
+          setApiPassengers(response.data)
+        }
+        setShowAddDialog(false)
+        setAddData({
+          firstName: '',
+          lastName: '',
+          email: ''
+        })
+      } else {
+        setError(result.message || 'Failed to add passenger')
+      }
+    } catch (err) {
+      console.error('Error adding passenger:', err)
+      setError('Failed to add passenger')
+    } finally {
+      setIsAdding(false)
     }
   }
 
@@ -437,6 +497,13 @@ const Passengers = () => {
                     <option value="with-documents">With Documents</option>
                     <option value="without-documents">Without Documents</option>
                   </select>
+                  <Button
+                    onClick={handleAddPassenger}
+                    className="flex items-center space-x-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>Add Passenger</span>
+                  </Button>
                 </div>
               </div>
 
@@ -713,6 +780,75 @@ const Passengers = () => {
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
               {isMerging ? 'Merging...' : 'Merge'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Passenger Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <User className="h-6 w-6 text-green-600" />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Add New Passenger
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mt-2">
+              Enter the passenger details below to add a new passenger.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-6">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="addFirstName" className="text-sm font-medium">First Name *</Label>
+                <Input
+                  id="addFirstName"
+                  value={addData.firstName}
+                  onChange={(e) => setAddData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="addLastName" className="text-sm font-medium">Last Name *</Label>
+                <Input
+                  id="addLastName"
+                  value={addData.lastName}
+                  onChange={(e) => setAddData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="addEmail" className="text-sm font-medium">Email</Label>
+              <Input
+                id="addEmail"
+                type="email"
+                value={addData.email}
+                onChange={(e) => setAddData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddDialog(false)}
+              disabled={isAdding}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmAddPassenger}
+              disabled={isAdding || !addData.firstName || !addData.lastName}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              {isAdding ? 'Adding...' : 'Add Passenger'}
             </Button>
           </DialogFooter>
         </DialogContent>
