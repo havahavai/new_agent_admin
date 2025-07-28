@@ -3,6 +3,7 @@ import { Wallet, User, Phone, Mail } from 'lucide-react'
 import { useState, useEffect } from 'react'
 // import SeatPreferenceWidgetSimple from '@/components/SeatPreferenceWidgetSimple'
 import SimpleSeatWidget from '@/components/SimpleSeatWidget'
+import BulkPassportUpload from '@/components/BulkPassportUpload'
 import { getB2BUserInfo, B2BUserResponse, ApiError } from '@/api'
 import { logout } from '../api/auth'
 
@@ -184,6 +185,8 @@ const Account = () => {
         </CardContent>
       </Card>
 
+      {/* Bulk Passport Upload */}
+      <BulkPassportUpload />
 
       <SimpleSeatWidget checkInPreference={userInfo.checkInPreference} />
     </div>

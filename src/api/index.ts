@@ -8,6 +8,7 @@ export * from "./uploadDocument";
 export * from "./updatePassenger";
 export * from "./addPassport";
 export * from "./updatePassport";
+export * from "./uploadBulkPassports";
 export * from "./updateTicket";
 export * from "./userCheckinPreference";
 export * from "./passengerCheckinPreference";

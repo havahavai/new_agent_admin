@@ -12,12 +12,6 @@ export interface LoginResponse {
   userType: string;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  idToken: string;
-}
-
 export interface SpecialUserLoginRequest {
   email: string;
   password: string;
@@ -31,6 +25,12 @@ export interface SpecialUserLoginResponse {
     userType: string;
   };
   message: string;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
 }
 
 /**
