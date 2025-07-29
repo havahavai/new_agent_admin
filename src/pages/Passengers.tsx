@@ -7,14 +7,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { User, FileCheck, FileX, Search, ChevronUp, ChevronDown, Trash2, Users, AlertTriangle } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { User, FileCheck, FileX, Search, ChevronUp, ChevronDown, Trash2, Users, AlertTriangle, Upload, FileText } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
-import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError, GetUserId, getJwtToken } from '@/api'
+
+import { countries } from '@/data/countries'
+import { getUsersPassengerDetails, PassengerDetailsResponse, PassengerDetail, ApiError, GetUserId, getJwtToken, uploadUserDocument, UploadDocumentResponse } from '@/api'
 import { bulkDeletePassengers } from '@/api/deletePassenger'
 import { newMergePassengers } from '@/api/mergePassengers'
 import { addPassenger } from '@/api/addPassenger'
+import { addPassport } from '@/api/addPassport'
+import { updatePassenger } from '@/api/updatePassenger'
 
 const Passengers = () => {
   const navigate = useNavigate()
@@ -55,8 +60,27 @@ const Passengers = () => {
   const [addData, setAddData] = useState({
     firstName: '',
     lastName: '',
-    email: ''
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: '',
+    nationality: '',
+    countryOfResidence: ''
   })
+
+  // Passport upload state for add passenger dialog
+  const [passportFile, setPassportFile] = useState<File | null>(null)
+  const [isUploadingPassport, setIsUploadingPassport] = useState(false)
+  const [passportUploadSuccess, setPassportUploadSuccess] = useState<string | null>(null)
+  const [passportUploadError, setPassportUploadError] = useState<string | null>(null)
+  const [extractedPassportData, setExtractedPassportData] = useState({
+    passportNumber: '',
+    dateOfIssue: '',
+    dateOfExpiry: '',
+    placeOfIssue: '',
+    nationality: ''
+  })
+  const [hasPassportData, setHasPassportData] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -301,24 +325,198 @@ const Passengers = () => {
     }
   }
 
+  // Passport upload handlers for add passenger dialog
+  const handlePassportFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Reset previous state
+    setPassportUploadError(null)
+    setPassportUploadSuccess(null)
+    setHasPassportData(false)
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+    if (!allowedTypes.includes(file.type)) {
+      setPassportUploadError('Please upload a PDF, JPEG, JPG, or PNG file.')
+      return
+    }
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      setPassportUploadError('File size must be less than 10MB.')
+      return
+    }
+
+    // Validate file name (basic check)
+    if (file.name.length > 255) {
+      setPassportUploadError('File name is too long.')
+      return
+    }
+
+    setPassportFile(file)
+
+    // Upload and extract passport data using the new API
+    try {
+      setIsUploadingPassport(true)
+
+      // Get user ID from JWT token
+      const jwtToken = getJwtToken()
+      if (!jwtToken) {
+        setPassportUploadError('Authentication token not found. Please login again.')
+        return
+      }
+
+      const userId = GetUserId(jwtToken)
+      if (!userId) {
+        setPassportUploadError('Unable to get user ID from authentication token.')
+        return
+      }
+
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('file', file)
+
+      console.log('Uploading passport with userId:', userId)
+
+      // Use the new passport upload API
+      const response = await fetch(
+        `https://prod-api.flyo.ai/core/v1/b2bUser/uploadPassport?userId=${userId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${jwtToken}`,
+          },
+          body: formData,
+        }
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Passport upload API error:', response.status, errorText)
+        setPassportUploadError(`Upload failed: ${response.status} ${response.statusText}`)
+        return
+      }
+
+      const result = await response.json()
+      console.log('Passport upload API response:', result)
+
+      if (result.success && result.data) {
+        // Check if we have LLM results (extracted passport data)
+        if (result.data.llmResult && result.data.llmResult.length > 0) {
+          const extractedData = result.data.llmResult[0]
+
+          if (extractedData.is_passport) {
+            // Format dates from YYYY-MM-DD to DD/MM/YYYY
+            const formatDate = (dateStr: string) => {
+              if (!dateStr) return ''
+              try {
+                const date = new Date(dateStr)
+                if (!isNaN(date.getTime())) {
+                  return date.toLocaleDateString('en-GB') // DD/MM/YYYY format
+                }
+                return dateStr
+              } catch {
+                return dateStr || ''
+              }
+            }
+
+            const extractedPassportData = {
+              passportNumber: extractedData.passport_number || '',
+              dateOfIssue: formatDate(extractedData.issue_date),
+              dateOfExpiry: formatDate(extractedData.date_of_expiry),
+              placeOfIssue: extractedData.issue_place || '',
+              nationality: extractedData.nationality || ''
+            }
+
+            // Auto-fill name fields if they're empty
+            if (!addData.firstName && extractedData.first_name) {
+              setAddData(prev => ({ ...prev, firstName: extractedData.first_name }))
+            }
+            if (!addData.lastName && extractedData.last_name) {
+              setAddData(prev => ({ ...prev, lastName: extractedData.last_name }))
+            }
+
+            // Set extracted passport data
+            setExtractedPassportData(extractedPassportData)
+            setHasPassportData(true)
+            setPassportUploadSuccess('Passport uploaded and data extracted successfully!')
+
+            // Show success message with details
+            const extractedFields = []
+            if (extractedData.first_name) extractedFields.push('First Name')
+            if (extractedData.last_name) extractedFields.push('Last Name')
+            if (extractedData.passport_number) extractedFields.push('Passport Number')
+            if (extractedData.date_of_expiry) extractedFields.push('Expiry Date')
+            if (extractedData.nationality) extractedFields.push('Nationality')
+            if (extractedData.issue_place) extractedFields.push('Place of Issue')
+
+            if (extractedFields.length > 0) {
+              setPassportUploadSuccess(`Passport processed successfully! Extracted: ${extractedFields.join(', ')}`)
+            }
+          } else {
+            setPassportUploadError('The uploaded document does not appear to be a valid passport.')
+          }
+        } else {
+          setPassportUploadError('No passport data could be extracted from the document. Please try with a clearer image.')
+        }
+
+        setTimeout(() => setPassportUploadSuccess(null), 7000)
+      } else {
+        const errorMessage = result.message || 'Failed to process passport document.'
+        setPassportUploadError(errorMessage)
+      }
+    } catch (err) {
+      console.error('Passport upload error:', err)
+      if (err instanceof Error) {
+        setPassportUploadError(`Upload failed: ${err.message}`)
+      } else {
+        setPassportUploadError('An unexpected error occurred while uploading the passport. Please try again.')
+      }
+    } finally {
+      setIsUploadingPassport(false)
+    }
+  }
+
   // Add passenger handlers
   const handleAddPassenger = () => {
     setAddData({
       firstName: '',
       lastName: '',
-      email: ''
+      email: '',
+      phone: '',
+      dateOfBirth: '',
+      gender: '',
+      nationality: '',
+      countryOfResidence: ''
     })
+    // Reset passport state
+    setPassportFile(null)
+    setIsUploadingPassport(false)
+    setPassportUploadSuccess(null)
+    setPassportUploadError(null)
+    setExtractedPassportData({
+      passportNumber: '',
+      dateOfIssue: '',
+      dateOfExpiry: '',
+      placeOfIssue: '',
+      nationality: ''
+    })
+    setHasPassportData(false)
     setShowAddDialog(true)
   }
 
   const confirmAddPassenger = async () => {
     try {
       setIsAdding(true)
+      setError(null)
 
       // Get userId from JWT token
       const jwtToken = getJwtToken()
       const userId = GetUserId(jwtToken)
 
+      // Step 1: Add the passenger
       const result = await addPassenger(
         addData.firstName,
         addData.lastName,
@@ -327,17 +525,117 @@ const Passengers = () => {
       )
 
       if ('success' in result && result.success) {
-        // Refresh the passenger list
+        // Get the updated passenger list to find the new passenger ID
         const response = await getUsersPassengerDetails()
         if ('data' in response) {
           setApiPassengers(response.data)
+
+          // Find the newly created passenger
+          const newPassenger = response.data.find(p =>
+            p.firstName === addData.firstName &&
+            p.lastName === addData.lastName &&
+            p.email === addData.email
+          )
+
+          if (newPassenger) {
+            const passengerIdNumber = newPassenger.id.replace('P', '')
+
+            // Step 2: Update passenger with additional details if provided
+            const hasAdditionalData = addData.phone || addData.dateOfBirth || addData.gender || addData.nationality || addData.countryOfResidence
+
+            if (hasAdditionalData) {
+              try {
+                // Convert nationality code back to nationality name for API if needed
+                const nationalityForApi = addData.nationality ?
+                  countries.find(country => country.code === addData.nationality)?.nationality || addData.nationality
+                  : ''
+
+                const updateResult = await updatePassenger(
+                  passengerIdNumber,
+                  addData.firstName,
+                  addData.lastName,
+                  addData.phone || '',
+                  addData.email || '',
+                  addData.dateOfBirth,
+                  addData.gender,
+                  nationalityForApi,
+                  addData.countryOfResidence
+                )
+
+                if (!('success' in updateResult && updateResult.success)) {
+                  console.warn('Failed to update passenger details:', updateResult.message)
+                }
+              } catch (updateErr) {
+                console.error('Error updating passenger details:', updateErr)
+              }
+            }
+
+            // Step 3: If we have passport data, add it to the newly created passenger
+            if (hasPassportData && extractedPassportData.passportNumber) {
+              try {
+                // Convert dates from DD/MM/YYYY to YYYY-MM-DD format for API
+                const convertDateFormat = (dateStr: string) => {
+                  if (!dateStr) return ''
+                  try {
+                    const parts = dateStr.split('/')
+                    if (parts.length === 3) {
+                      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
+                    }
+                    return dateStr
+                  } catch {
+                    return dateStr
+                  }
+                }
+
+                const passportResult = await addPassport(
+                  parseInt(passengerIdNumber),
+                  extractedPassportData.passportNumber,
+                  convertDateFormat(extractedPassportData.dateOfIssue),
+                  convertDateFormat(extractedPassportData.dateOfExpiry),
+                  extractedPassportData.placeOfIssue
+                )
+
+                if (!('success' in passportResult && passportResult.success)) {
+                  console.warn('Failed to add passport data:', passportResult.message)
+                }
+              } catch (passportErr) {
+                console.error('Error adding passport data:', passportErr)
+              }
+            }
+          }
         }
+
+        // Step 3: Refresh the passenger list one more time to get the complete data
+        const finalResponse = await getUsersPassengerDetails()
+        if ('data' in finalResponse) {
+          setApiPassengers(finalResponse.data)
+        }
+
+        // Step 4: Close dialog and reset state
         setShowAddDialog(false)
         setAddData({
           firstName: '',
           lastName: '',
-          email: ''
+          email: '',
+          phone: '',
+          dateOfBirth: '',
+          gender: '',
+          nationality: '',
+          countryOfResidence: ''
         })
+        // Reset passport state
+        setPassportFile(null)
+        setIsUploadingPassport(false)
+        setPassportUploadSuccess(null)
+        setPassportUploadError(null)
+        setExtractedPassportData({
+          passportNumber: '',
+          dateOfIssue: '',
+          dateOfExpiry: '',
+          placeOfIssue: '',
+          nationality: ''
+        })
+        setHasPassportData(false)
       } else {
         setError(result.message || 'Failed to add passenger')
       }
@@ -787,7 +1085,7 @@ const Passengers = () => {
 
       {/* Add Passenger Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="dialog-narrow w-full max-h-[90vh] overflow-y-auto mx-4">
           <DialogHeader className="text-center">
             <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <User className="h-6 w-6 text-green-600" />
@@ -796,59 +1094,332 @@ const Passengers = () => {
               Add New Passenger
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500 mt-2">
-              Enter the passenger details below to add a new passenger.
+              Enter the passenger details below and optionally upload a passport to auto-fill passport information.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 mt-6">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="addFirstName" className="text-sm font-medium">First Name *</Label>
-                <Input
-                  id="addFirstName"
-                  value={addData.firstName}
-                  onChange={(e) => setAddData(prev => ({ ...prev, firstName: e.target.value }))}
-                  placeholder="Enter first name"
-                  className="mt-1"
-                />
+          <div className="space-y-6 mt-6">
+            {/* Passport Upload Section - Moved to Top */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-gray-900">Passport Upload (Optional)</h4>
+                {hasPassportData && (
+                  <Badge variant="secondary" className="text-green-600 bg-green-50">
+                    <FileCheck className="h-3 w-3 mr-1" />
+                    Extracted
+                  </Badge>
+                )}
               </div>
-              <div>
-                <Label htmlFor="addLastName" className="text-sm font-medium">Last Name *</Label>
-                <Input
-                  id="addLastName"
-                  value={addData.lastName}
-                  onChange={(e) => setAddData(prev => ({ ...prev, lastName: e.target.value }))}
-                  placeholder="Enter last name"
-                  className="mt-1"
-                />
+              <p className="text-sm text-gray-600">
+                Upload a passport document to automatically extract and fill the form fields below.
+              </p>
+
+              {/* File Upload Area */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                {!passportFile ? (
+                  <div className="text-center">
+                    <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 mb-2">Upload passport document</p>
+                    <input
+                      type="file"
+                      id="passport-upload-add"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handlePassportFileUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('passport-upload-add')?.click()}
+                      disabled={isUploadingPassport}
+                      className="text-sm"
+                    >
+                      {isUploadingPassport ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Choose File
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <FileText className="h-5 w-5 text-green-600 mr-2" />
+                      <span className="text-sm text-gray-700">{passportFile.name}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPassportFile(null)
+                        setHasPassportData(false)
+                        setExtractedPassportData({
+                          passportNumber: '',
+                          dateOfIssue: '',
+                          dateOfExpiry: '',
+                          placeOfIssue: '',
+                          nationality: ''
+                        })
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
               </div>
+
+              {/* Status Messages */}
+              {passportUploadSuccess && (
+                <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
+                  {passportUploadSuccess}
+                </div>
+              )}
+              {passportUploadError && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  {passportUploadError}
+                </div>
+              )}
             </div>
-            <div>
-              <Label htmlFor="addEmail" className="text-sm font-medium">Email</Label>
-              <Input
-                id="addEmail"
-                type="email"
-                value={addData.email}
-                onChange={(e) => setAddData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="Enter email address"
-                className="mt-1"
-              />
+
+            {/* Basic Information Section */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900">Basic Information</h4>
+
+              {/* First Line: Gender, First Name, Last Name */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="addGender" className="text-sm font-medium">Gender</Label>
+                  <Select
+                    value={addData.gender}
+                    onValueChange={(value) => setAddData(prev => ({ ...prev, gender: value }))}
+                  >
+                    <SelectTrigger className="mt-1 h-9 text-sm">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="addFirstName" className="text-sm font-medium">First Name *</Label>
+                  <Input
+                    id="addFirstName"
+                    value={addData.firstName}
+                    onChange={(e) => setAddData(prev => ({ ...prev, firstName: e.target.value }))}
+                    placeholder="Enter first name"
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="addLastName" className="text-sm font-medium">Last Name *</Label>
+                  <Input
+                    id="addLastName"
+                    value={addData.lastName}
+                    onChange={(e) => setAddData(prev => ({ ...prev, lastName: e.target.value }))}
+                    placeholder="Enter last name"
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Second Line: Mobile Number, Email */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="addPhone" className="text-sm font-medium">Mobile Number</Label>
+                  <Input
+                    id="addPhone"
+                    type="tel"
+                    value={addData.phone}
+                    onChange={(e) => setAddData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Enter mobile number"
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="addEmail" className="text-sm font-medium">Email</Label>
+                  <Input
+                    id="addEmail"
+                    type="email"
+                    value={addData.email}
+                    onChange={(e) => setAddData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter email address"
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Date of Birth */}
+              <div>
+                <Label htmlFor="addDateOfBirth" className="text-sm font-medium">Date of Birth</Label>
+                <Input
+                  id="addDateOfBirth"
+                  type="date"
+                  value={addData.dateOfBirth}
+                  onChange={(e) => setAddData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  className="mt-1 h-9 text-sm"
+                />
+              </div>
+
+              {/* Document Number */}
+              <div>
+                <Label htmlFor="addDocumentNumber" className="text-sm font-medium">Document Number *</Label>
+                <Input
+                  id="addDocumentNumber"
+                  value={extractedPassportData.passportNumber}
+                  onChange={(e) => setExtractedPassportData(prev => ({ ...prev, passportNumber: e.target.value }))}
+                  placeholder="Enter document/passport number"
+                  className="mt-1 h-9 text-sm"
+                />
+              </div>
+
+              {/* Date of Issue and Date of Expiry */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="addDateOfIssue" className="text-sm font-medium">Date of Issue</Label>
+                  <Input
+                    id="addDateOfIssue"
+                    type="date"
+                    value={extractedPassportData.dateOfIssue ? extractedPassportData.dateOfIssue.split('/').reverse().join('-') : ''}
+                    onChange={(e) => {
+                      const dateValue = e.target.value
+                      const formattedDate = dateValue ? new Date(dateValue).toLocaleDateString('en-GB') : ''
+                      setExtractedPassportData(prev => ({ ...prev, dateOfIssue: formattedDate }))
+                    }}
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="addDateOfExpiry" className="text-sm font-medium">Date of Expiry *</Label>
+                  <Input
+                    id="addDateOfExpiry"
+                    type="date"
+                    value={extractedPassportData.dateOfExpiry ? extractedPassportData.dateOfExpiry.split('/').reverse().join('-') : ''}
+                    onChange={(e) => {
+                      const dateValue = e.target.value
+                      const formattedDate = dateValue ? new Date(dateValue).toLocaleDateString('en-GB') : ''
+                      setExtractedPassportData(prev => ({ ...prev, dateOfExpiry: formattedDate }))
+                    }}
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Country of Nationality and Country of Residence */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="addNationality" className="text-sm font-medium">Country of Nationality</Label>
+                  <Select
+                    value={addData.nationality}
+                    onValueChange={(value) => setAddData(prev => ({ ...prev, nationality: value }))}
+                  >
+                    <SelectTrigger className="mt-1 h-9 text-sm">
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="addCountryOfResidence" className="text-sm font-medium">Country of Residence</Label>
+                  <Select
+                    value={addData.countryOfResidence}
+                    onValueChange={(value) => setAddData(prev => ({ ...prev, countryOfResidence: value }))}
+                  >
+                    <SelectTrigger className="mt-1 h-9 text-sm">
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Place of Issue */}
+              <div>
+                <Label htmlFor="addPlaceOfIssue" className="text-sm font-medium">Place of Issue *</Label>
+                <Input
+                  id="addPlaceOfIssue"
+                  value={extractedPassportData.placeOfIssue}
+                  onChange={(e) => setExtractedPassportData(prev => ({ ...prev, placeOfIssue: e.target.value }))}
+                  placeholder="Enter place of issue"
+                  className="mt-1 h-9 text-sm"
+                />
+              </div>
             </div>
           </div>
           <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
             <Button
               variant="outline"
-              onClick={() => setShowAddDialog(false)}
-              disabled={isAdding}
+              onClick={() => {
+                setShowAddDialog(false)
+                // Reset all state when canceling
+                setAddData({
+                  firstName: '',
+                  lastName: '',
+                  email: '',
+                  phone: '',
+                  dateOfBirth: '',
+                  gender: '',
+                  nationality: '',
+                  countryOfResidence: ''
+                })
+                setPassportFile(null)
+                setIsUploadingPassport(false)
+                setPassportUploadSuccess(null)
+                setPassportUploadError(null)
+                setExtractedPassportData({
+                  passportNumber: '',
+                  dateOfIssue: '',
+                  dateOfExpiry: '',
+                  placeOfIssue: '',
+                  nationality: ''
+                })
+                setHasPassportData(false)
+              }}
+              disabled={isAdding || isUploadingPassport}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmAddPassenger}
-              disabled={isAdding || !addData.firstName || !addData.lastName}
+              disabled={isAdding || isUploadingPassport || !addData.firstName || !addData.lastName}
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
-              {isAdding ? 'Adding...' : 'Add Passenger'}
+              {isAdding ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {hasPassportData ? 'Adding Passenger & Passport...' : 'Adding Passenger...'}
+                </>
+              ) : (
+                <>
+                  Add Passenger
+                  {hasPassportData && (
+                    <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700">
+                      +Passport
+                    </Badge>
+                  )}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
