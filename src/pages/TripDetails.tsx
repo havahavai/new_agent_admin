@@ -997,7 +997,7 @@ const TripDetails = () => {
         <div class="flight-info">
             <div class="info-section">
                 <div class="info-title">Passenger Name</div>
-                <div class="info-value">${boardingPass.passengerName}</div>
+                <div class="info-value">${boardingPass.passengerName.toUpperCase()}</div>
                 <div class="info-title">Flight Number</div>
                 <div class="info-value">${boardingPass.flightNumber}</div>
             </div>
@@ -1205,7 +1205,7 @@ const TripDetails = () => {
         <div class="flight-info">
             <div class="info-section">
                 <div class="info-title">Passenger Name</div>
-                <div class="info-value">${boardingPass.passengerName}</div>
+                <div class="info-value">${boardingPass.passengerName.toUpperCase()}</div>
                 <div class="info-title">Flight Number</div>
                 <div class="info-value">${boardingPass.flightNumber}</div>
             </div>
@@ -1669,7 +1669,7 @@ const TripDetails = () => {
                                 title={passenger.passengerId ? "Click to view passenger details in new tab" : "Passenger details not available"}
                                 disabled={!passenger.passengerId}
                               >
-                                {passenger.name}
+                                {passenger.name.toUpperCase()}
                               </button>
                             </h3>
                             {passenger.isMainPassenger && (

@@ -32,20 +32,20 @@ export const PassengerTableRow = memo<PassengerTableRowProps>(({
         <MemoizedCheckbox
           checked={isSelected}
           onCheckedChange={onSelectionChange}
-          ariaLabel={`Select ${passenger.firstName} ${passenger.lastName}`}
+          ariaLabel={`Select ${passenger.firstName.toUpperCase()} ${passenger.lastName.toUpperCase()}`}
         />
       </TableCell>
       <TableCell
         className="font-medium cursor-pointer"
         onClick={handleRowClick}
       >
-        <span>{passenger.firstName}</span>
+        <span>{passenger.firstName.toUpperCase()}</span>
       </TableCell>
       <TableCell
         className="font-medium cursor-pointer"
         onClick={handleRowClick}
       >
-        <span>{passenger.lastName}</span>
+        <span>{passenger.lastName.toUpperCase()}</span>
       </TableCell>
       <TableCell>
         <div className="flex justify-start">
