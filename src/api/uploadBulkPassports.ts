@@ -81,7 +81,7 @@ export const uploadBulkPassports = async (
       }))
     );
 
-    const url = `http://localhost:443/core/v1/b2bUser/uploadPassport?userId=${userId}`;
+    const url = `https://prod-api.flyo.ai/core/v1/b2bUser/uploadPassport?userId=${userId}`;
     console.log("Request URL:", url);
     console.log(
       "Authorization header:",
