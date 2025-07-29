@@ -28,6 +28,7 @@ import {
   Upload,
   Download,
   Settings,
+  Edit,
   AlertTriangle,
   Copy,
   Check
@@ -844,7 +845,72 @@ const PassengerDetails = () => {
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+              {/* Passport Details Management - Moved to top for better UX */}
+              <div className="pt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Passport Details</h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {passenger.hasDocuments ? 'Update your passport information below' : 'Add your passport information below'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {!isPassportEditMode ? (
+                      <Button
+                        onClick={() => setIsPassportEditMode(true)}
+                        size="sm"
+                        className="flex items-center"
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        {passenger.hasDocuments ? 'Edit Details' : 'Add Details'}
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={handleSavePassport}
+                          disabled={isUpdatingPassport}
+                          size="sm"
+                          className="flex items-center"
+                        >
+                          {isUpdatingPassport ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Save
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setIsPassportEditMode(false)
+                            setValidationErrors({})
+                            // Reset form data if needed using the new API
+                            fetchPassengerDetails()
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {isPassportEditMode && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <strong>Edit Mode:</strong> You can now modify the passport details below. Click "Save" when done or "Cancel" to discard changes.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Document Type</label>
                   <Input
@@ -921,66 +987,7 @@ const PassengerDetails = () => {
                 </div>
               </div>
 
-              {/* Passport Details Management */}
-              <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-gray-900">Passport Details</h4>
-                  <div className="flex gap-2">
-                    {!isPassportEditMode ? (
-                      <Button
-                        onClick={() => setIsPassportEditMode(true)}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center"
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        {passenger.hasDocuments ? 'Edit Details' : 'Add Details'}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={handleSavePassport}
-                          disabled={isUpdatingPassport}
-                          size="sm"
-                          className="flex items-center"
-                        >
-                          {isUpdatingPassport ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Save
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setIsPassportEditMode(false)
-                            setValidationErrors({})
-                            // Reset form data if needed using the new API
-                            fetchPassengerDetails()
-                          }}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
 
-                {isPassportEditMode && (
-                  <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-700">
-                      <strong>Edit Mode:</strong> You can now modify the passport details above. Click "Save" when done or "Cancel" to discard changes.
-                    </p>
-                  </div>
-                )}
-              </div>
 
               {/* Passport Document Section */}
               <div className="border-t pt-4">
