@@ -626,7 +626,7 @@ const PassengerDetails = () => {
             {/* Header content row */}
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{passenger.name}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{passenger.name.toUpperCase()}</h1>
               </div>
               <div className="flex items-center">
                 <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
@@ -1020,7 +1020,7 @@ const PassengerDetails = () => {
                           <div className="w-full">
                             <img
                               src={passenger.documentUrl}
-                              alt={`Passport Document - ${passenger.name}`}
+                              alt={`Passport Document - ${passenger.name.toUpperCase()}`}
                               className="w-full h-96 object-contain bg-gray-50 rounded"
                               onError={(e) => {
                                 console.error('Image preview failed:', e);

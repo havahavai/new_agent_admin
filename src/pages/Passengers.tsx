@@ -486,7 +486,7 @@ const Passengers = () => {
                       className="flex items-center space-x-2 cursor-pointer flex-1"
                       onClick={() => navigate(`/passengers/${passenger.id}`)}
                     >
-                      <div className="font-medium text-gray-900">{passenger.name}</div>
+                      <div className="font-medium text-gray-900">{passenger.name.toUpperCase()}</div>
                       {!passenger.hasDocuments && (
                         <FileX className="h-4 w-4 text-red-500" />
                       )}
@@ -494,7 +494,7 @@ const Passengers = () => {
                     <MemoizedCheckbox
                       checked={selectedPassengers.has(passenger.id)}
                       onCheckedChange={createPassengerHandler(passenger.id)}
-                      ariaLabel={`Select ${passenger.name}`}
+                      ariaLabel={`Select ${passenger.name.toUpperCase()}`}
                     />
                   </div>
                   {!passenger.hasDocuments && (

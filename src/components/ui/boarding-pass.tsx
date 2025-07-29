@@ -25,7 +25,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 ║                                BOARDING PASS                                 ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║  PASSENGER: ${passengerName.padEnd(25)} FLIGHT: ${boardingPass.flightNumber.padEnd(10)}        ║
+║  PASSENGER: ${passengerName.toUpperCase().padEnd(25)} FLIGHT: ${boardingPass.flightNumber.padEnd(10)}        ║
 ║                                                                              ║
 ║  FROM: ${boardingPass.route.fromCode.padEnd(3)} ${boardingPass.route.from.padEnd(20)} TO: ${boardingPass.route.toCode.padEnd(3)} ${boardingPass.route.to.padEnd(15)} ║
 ║                                                                              ║
@@ -89,7 +89,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         <div class="header">✈ BOARDING PASS ✈</div>
         
         <div class="section">
-            <span class="label">PASSENGER:</span> ${passengerName}
+            <span class="label">PASSENGER:</span> ${passengerName.toUpperCase()}
         </div>
         
         <div class="section">
@@ -181,7 +181,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Passenger</p>
-                <p className="font-bold text-gray-900 text-lg">{passengerName}</p>
+                <p className="font-bold text-gray-900 text-lg">{passengerName.toUpperCase()}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Flight</p>

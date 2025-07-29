@@ -449,7 +449,7 @@ const generateBoardingPass = (
     id: `BP-${passenger.id}-${flight.id}`,
     passengerId: passenger.id,
     flightId: flight.id,
-    passengerName: passenger.name,
+    passengerName: passenger.name.toUpperCase(),
     flightNumber: flight.flightNumber,
     route: flight.route,
     date: new Date().toLocaleDateString(),
