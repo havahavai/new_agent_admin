@@ -45,6 +45,11 @@ export function getCheckinStatusDisplay(
     displayStatus = "MISSING_INFO";
   } else if (upperStatus === "SCHEDULED") {
     displayStatus = "SCHEDULED";
+  } else if (
+    upperStatus === "MANUAL_INTERVENTION_REQUIRED" &&
+    upperSubStatus === "MISSING_INFO"
+  ) {
+    displayStatus = "MISSING_INFO";
   } else if (upperStatus.includes("COMPLETE")) {
     displayStatus = "COMPLETED";
   } else if (upperStatus === "FAILED_BY_ADMIN") {
