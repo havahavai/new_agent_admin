@@ -127,7 +127,9 @@ export interface PassengerDocument4 {
   dateOfIssue: string;
   dateOfExpiry: string;
   nationality: string;
+  countryCode?: string; // Optional field for country code from API
   placeOfIssue: string;
+  placeOfIssueCountryCode?: string; // Optional field for place of issue country code from API
   countryOfResidence: string;
   documentUrl?: string;
 }
@@ -139,6 +141,7 @@ export interface PassengerDetail {
   lastName: string;
   dateOfBirth: string;
   nationality: string;
+  countryCode?: string; // Optional field for country code from API
   gender: string;
   countryOfResidence: string;
   email?: string; // Optional field that might not be in API response
