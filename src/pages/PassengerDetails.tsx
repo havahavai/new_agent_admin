@@ -46,6 +46,7 @@ import {
   updatePassenger,
   addPassport,
   updatePassport,
+  CheckInPreference,
 } from "@/api";
 import { getPassengerDetailById } from "@/api/passengerDetails";
 import SimpleSeatWidget from "@/components/SimpleSeatWidget";
@@ -99,7 +100,7 @@ const PassengerDetails = () => {
     passengerFlightId: 0,
     documentType: "",
     documentUrl: "",
-    seatPreferences: undefined as any,
+    seatPreferences: undefined as CheckInPreference | undefined,
   });
 
   // Function to fetch passenger details from API
@@ -457,12 +458,6 @@ const PassengerDetails = () => {
       setError("An unexpected error occurred while saving passport");
     } finally {
       setIsUpdatingPassport(false);
-    }
-  };
-
-  const handleViewDocument = (documentUrl: string) => {
-    if (documentUrl) {
-      window.open(documentUrl, "_blank");
     }
   };
 

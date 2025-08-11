@@ -538,7 +538,7 @@ const Passengers = () => {
           )
 
           if (newPassenger) {
-            const passengerIdNumber = newPassenger.id.replace('P', '')
+            const passengerIdNumber = newPassenger.passengerId.toString()
 
             // Step 2: Update passenger with additional details if provided
             const hasAdditionalData = addData.phone || addData.dateOfBirth || addData.gender || addData.nationality || addData.countryOfResidence
