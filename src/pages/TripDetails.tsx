@@ -215,6 +215,7 @@ const convertApiToBookingDetails = (
       arrival: extractTimeFromISO(apiData.arrival.time),
       checkInStatus: apiData.checkInStatus,
       checkInSubStatus: apiData.checkInSubStatus,
+      statusMessage: apiData.statusMessage,
       aircraft: apiData.aircraftType,
       gate: apiData.boardingGate || "TBD",
       status: flightStatus,
@@ -1360,8 +1361,8 @@ const TripDetails = () => {
   };
 
   // Use the centralized utility function for check-in status
-  const getCheckinStatusInfo = (status: string, subStatus?: string) => {
-    return getCheckinStatusDisplay(status, subStatus);
+  const getCheckinStatusInfo = (status: string, subStatus?: string, statusMessage?: string) => {
+    return getCheckinStatusDisplay(status, subStatus, statusMessage);
   };
 
   if (loading) {
@@ -1534,7 +1535,7 @@ const TripDetails = () => {
           {/* Status badge and download button - Mobile responsive */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {(() => {
-              const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus);
+              const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus, flight.statusMessage);
               return (
                 <Badge
                   className={`${statusInfo.colorClass} text-xs sm:text-sm w-fit`}
