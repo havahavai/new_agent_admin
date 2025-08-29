@@ -11,7 +11,8 @@ export type CheckInStatusDisplay =
   | "COMPLETED"
   | "INPROGRESS"
   | "FAILED"
-  | "MISSING_INFO";
+  | "MISSING_INFO"
+  | "In Progress";
 
 export interface CheckInStatusResult {
   displayStatus: CheckInStatusDisplay;
@@ -20,74 +21,50 @@ export interface CheckInStatusResult {
 
 /**
  * Utility function to normalize check-in status and provide consistent display values and colors
- * @param status - The raw check-in status from API or data
- * @param subStatus - The optional check-in sub-status from API
+ * @param checkInStatus - The raw check-in status from API or data
+ * @param statusMessage - The status message from API
+ * @param checkInSubStatus - The optional check-in sub-status from API
  * @returns Object with normalized display status and corresponding color class
  */
 export function getCheckinStatusDisplay(
-  status: string,
-  subStatus?: string
+  checkInStatus: string,
+  checkInSubStatus?: string,
+  statusMessage?: string
 ): CheckInStatusResult {
-  // Convert to uppercase for consistent comparison
-  const upperStatus = status.toUpperCase();
-  const upperSubStatus = subStatus?.toUpperCase();
-  console.log("Status:", upperStatus, "SubStatus:", upperSubStatus);
-
-  // Determine display status based on the rules:
-  // - If it's SCHEDULED and checkInSubStatus is MISSING_INFO, show MISSING_INFO
-  // - If it's SCHEDULED, show SCHEDULED
-  // - If it contains COMPLETE (using includes), show COMPLETED
-  // - If it's FAILED_BY_ADMIN, show FAILED
-  // - In other cases, show INPROGRESS
-  let displayStatus: CheckInStatusDisplay;
-
-  if (upperStatus === "SCHEDULED" && upperSubStatus === "MISSING_INFO") {
-    displayStatus = "MISSING_INFO";
-  } else if (upperStatus === "SCHEDULED") {
-    displayStatus = "SCHEDULED";
-  } else if (
-    upperStatus === "MANUAL_INTERVENTION_REQUIRED" &&
-    upperSubStatus === "MISSING_INFO"
-  ) {
-    displayStatus = "MISSING_INFO";
-  } else if (upperStatus.includes("COMPLETE")) {
-    displayStatus = "COMPLETED";
-  } else if (upperStatus === "FAILED_BY_ADMIN") {
-    displayStatus = "FAILED";
-  } else {
-    displayStatus = "INPROGRESS";
-  }
-
-  // Get color class based on display status:
-  // - COMPLETED: green
-  // - SCHEDULED: yellow
-  // - INPROGRESS: blue
-  // - FAILED: red
-  // - MISSING_INFO: red
+  let displayText: string;
   let colorClass: string;
 
-  switch (displayStatus) {
-    case "COMPLETED":
-      colorClass = "bg-green-100 text-green-800";
-      break;
-    case "SCHEDULED":
-      colorClass = "bg-yellow-100 text-yellow-800";
-      break;
-    case "INPROGRESS":
-      colorClass = "bg-blue-100 text-blue-800";
-      break;
-    case "FAILED":
-      colorClass = "bg-red-100 text-red-800";
-      break;
-    case "MISSING_INFO":
-      colorClass = "bg-red-100 text-red-800";
-      break;
-    default:
-      colorClass = "bg-gray-100 text-gray-800";
+  // Implement the logic in the correct order with exact string matching
+  if (checkInStatus.includes("COMPLETED")) {
+    // 1. If checkInStatus.includes('COMPLETED') → display: "COMPLETED" with green color
+    displayText = "COMPLETED";
+    colorClass = "bg-green-100 text-green-800";
+  } else if (checkInStatus === "FAILED_BY_ADMIN") {
+    // 2. If checkInStatus === 'FAILED_BY_ADMIN' → display: statusMessage value with red color
+    displayText = statusMessage || "FAILED";
+    colorClass = "bg-red-100 text-red-800";
+  } else if (
+    checkInStatus === "MANUAL_INTERVENTION_REQUIRED" &&
+    checkInSubStatus === "MISSING_INFO"
+  ) {
+    // 3. If checkInStatus === 'MANUAL_INTERVENTION_REQUIRED' AND checkInSubStatus === 'MISSING_INFO' → display: checkInSubStatus value with red color
+    displayText = checkInSubStatus;
+    colorClass = "bg-red-100 text-red-800";
+  } else if (
+    checkInStatus === "SCHEDULED" &&
+    checkInSubStatus === "MISSING_INFO"
+  ) {
+    // 4. If checkInStatus === 'SCHEDULED' AND checkInSubStatus === 'MISSING_INFO' → display: checkInSubStatus value with red color
+    displayText = checkInSubStatus;
+    colorClass = "bg-red-100 text-red-800";
+  } else {
+    // 5. For all other cases → display: "In Progress" with yellow color
+    displayText = "In Progress";
+    colorClass = "bg-yellow-100 text-yellow-800";
   }
 
   return {
-    displayStatus,
+    displayStatus: displayText as CheckInStatusDisplay,
     colorClass,
   };
 }

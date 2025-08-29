@@ -7,6 +7,7 @@ export interface FlightData {
   flightNumber: string;
   checkInStatus: string;
   checkInSubStatus?: string;
+  statusMessage?: string;
   airline: string;
   departureAirport: string;
   arrivalAirport: string;
@@ -75,6 +76,7 @@ export interface FlightDataByIdsResponse {
     bookingReference: string;
     checkInStatus: string;
     checkInSubStatus?: string;
+    statusMessage?: string;
     isInternational: boolean;
     aircraftType: string;
     delay: string;
