@@ -376,7 +376,7 @@ const Passengers = () => {
 
       // Create FormData for file upload
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('files', file)
 
       console.log('Uploading passport with userId:', userId)
 
