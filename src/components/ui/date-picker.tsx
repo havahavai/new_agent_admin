@@ -91,13 +91,13 @@ export function DatePicker({
       )}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+          <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10 pointer-events-none" />
           <Input
             id="date"
             value={inputValue}
             placeholder={placeholder}
             disabled={disabled}
-            className={`bg-background pl-10 h-9 text-sm ${isEmpty ? 'border-red-500 border-2 focus:border-red-500 focus:ring-red-500' : ''}`}
+            className={`bg-background pl-10 h-10 text-sm ${isEmpty ? 'border-red-500 border-2 focus:border-red-500 focus:ring-red-500' : ''}`}
             onChange={(e) => {
               const inputVal = e.target.value
               setInputValue(inputVal)
@@ -128,7 +128,7 @@ export function DatePicker({
               variant="outline"
               disabled={disabled}
               size="sm"
-              className="px-2 h-9"
+              className="px-3 h-10 flex-shrink-0"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
@@ -136,12 +136,12 @@ export function DatePicker({
                 setOpen(!open)
               }}
             >
-              <CalendarIcon className="h-3.5 w-3.5" />
+              <CalendarIcon className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
             className="w-auto overflow-hidden p-0 z-50"
-            align="start"
+            align="end"
             sideOffset={4}
           >
             <Calendar

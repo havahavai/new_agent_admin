@@ -15,4 +15,8 @@ export * from "./passengerCheckinPreference";
 export * from "./deletePassenger";
 export * from "./mergePassengers";
 export * from "./addPassenger";
+export * from "./addFlightManually";
+export * from "./uploadTicket";
+export * from "./manualFlight";
+export * from "./ticketUpload";
 export * from "./utils";

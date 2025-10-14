@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from './card'
 import { Badge } from './badge'
-import { Plane, Users } from 'lucide-react'
+import { Plane, Users, Clock, ArrowRight } from 'lucide-react'
 import { cn, getCheckinStatusDisplay } from '@/lib/utils'
 
 export interface Flight {
@@ -44,7 +44,6 @@ export const FlightList: React.FC<FlightListProps> = ({
   const navigate = useNavigate()
 
   const handleFlightClick = (flight: Flight) => {
-    console.log('FlightList: Navigating to flight:', flight.id, 'ticketId:', flight.ticketId)
     if (flight.ticketId) {
       // Navigate with both flightId and ticketId for API data
       navigate(`/trips/${flight.id}/${flight.ticketId}`)
@@ -114,78 +113,100 @@ export const FlightList: React.FC<FlightListProps> = ({
             className="hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50"
             onClick={() => handleFlightClick(flight)}
           >
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               {/* Mobile Layout */}
-              <div className="block md:hidden space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-gray-900">{flight.flightNumber}</div>
+              <div className="block md:hidden space-y-3">
+                {/* Header Row */}
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900 text-base">{flight.flightNumber}</div>
                     {flight.airline && (
-                      <div className="text-xs text-gray-500 mb-1">{flight.airline}</div>
+                      <div className="text-xs text-gray-500">{flight.airline}</div>
                     )}
-                    <div className="text-sm text-gray-600">{flight.route.fromCode} → {flight.route.toCode}</div>
                   </div>
-                  <Badge className={getFlightTypeColor(flight.flightType)}>
+                  <Badge className={getFlightTypeColor(flight.flightType)} variant="secondary">
                     {flight.flightType}
                   </Badge>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Users className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{flight.passengers} passengers</span>
+                {/* Route and Time Row */}
+                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-500 mb-0.5">From</div>
+                    <div className="font-semibold text-gray-900">{flight.route.fromCode}</div>
+                    <div className="text-sm text-blue-600 font-medium mt-0.5">{flight.departure}</div>
+                  </div>
+                  <div className="px-3">
+                    <ArrowRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <div className="flex-1 text-right">
+                    <div className="text-xs text-gray-500 mb-0.5">To</div>
+                    <div className="font-semibold text-gray-900">{flight.route.toCode}</div>
+                    <div className="text-sm text-blue-600 font-medium mt-0.5">{flight.arrival}</div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="text-sm">
-                    <span className="text-gray-500">Web Check-in: </span>
-                    {(() => {
-                      const statusInfo = getCheckinStatusInfo(flight.checkInStatus,flight.checkInSubStatus,flight.statusMessage)
-                      return (
-                        <Badge className={statusInfo.colorClass} variant="outline">
-                          {statusInfo.displayStatus}
-                        </Badge>
-                      )
-                    })()}
+                {/* Info Row */}
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <Users className="h-4 w-4 text-gray-400" />
+                    <span>{flight.passengers} pax</span>
                   </div>
+                  {(() => {
+                    const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus, flight.statusMessage)
+                    return (
+                      <Badge className={statusInfo.colorClass} variant="outline">
+                        {statusInfo.displayStatus}
+                      </Badge>
+                    )
+                  })()}
                 </div>
               </div>
 
               {/* Desktop Layout */}
-              <div className="hidden md:flex md:items-center md:justify-between">
-                <div className="flex items-center space-x-6 flex-1">
-                  <div>
-                    <div className="font-semibold text-gray-900">{flight.flightNumber}</div>
+              <div className="hidden md:flex md:items-center md:justify-between md:gap-6">
+                {/* Flight Info */}
+                <div className="flex items-center gap-6 flex-1">
+                  <div className="min-w-[140px]">
+                    <div className="font-semibold text-gray-900 text-base">{flight.flightNumber}</div>
                     {flight.airline && (
-                      <div className="text-xs text-gray-500 mb-1">{flight.airline}</div>
+                      <div className="text-xs text-gray-500">{flight.airline}</div>
                     )}
-                    <div className="text-sm text-gray-600">{flight.route.fromCode} → {flight.route.toCode}</div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className="text-sm">
-                      <div className="text-gray-500 flex items-center space-x-1">
-                        <Users className="h-4 w-4" />
-                        <span>{flight.passengers} passengers</span>
-                      </div>
+                  {/* Route with Times */}
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">From</div>
+                      <div className="font-semibold text-gray-900">{flight.route.fromCode}</div>
+                      <div className="text-sm text-blue-600 font-medium mt-1">{flight.departure}</div>
                     </div>
-                    <div className="text-sm">
-                      <div className="text-gray-500">Web Check-in</div>
-                      {(() => {
-                        const statusInfo = getCheckinStatusInfo(flight.checkInStatus,flight.checkInSubStatus,flight.statusMessage)
-                        return (
-                          <Badge className={statusInfo.colorClass} variant="outline">
-                            {statusInfo.displayStatus}
-                          </Badge>
-                        )
-                      })()}
+                    <ArrowRight className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">To</div>
+                      <div className="font-semibold text-gray-900">{flight.route.toCode}</div>
+                      <div className="text-sm text-blue-600 font-medium mt-1">{flight.arrival}</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Badge className={getFlightTypeColor(flight.flightType)}>
+                {/* Right Side Info */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                    <Users className="h-4 w-4 text-gray-400" />
+                    <span>{flight.passengers} pax</span>
+                  </div>
+
+                  {(() => {
+                    const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus, flight.statusMessage)
+                    return (
+                      <Badge className={statusInfo.colorClass} variant="outline">
+                        {statusInfo.displayStatus}
+                      </Badge>
+                    )
+                  })()}
+
+                  <Badge className={getFlightTypeColor(flight.flightType)} variant="secondary">
                     {flight.flightType}
                   </Badge>
                 </div>
