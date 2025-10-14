@@ -135,7 +135,7 @@ export const UploadTicketDialog: React.FC<UploadTicketDialogProps> = ({
             tickets = response.data.ticket
           } else if (Array.isArray(response.data)) {
             tickets = response.data
-          } else if (response.data) {
+          } else if (response.data && !('ticket' in response.data) && !Array.isArray(response.data)) {
             // Single ticket object
             tickets = [response.data as TicketInfo]
           }

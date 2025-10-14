@@ -329,7 +329,7 @@ export const AddFlightManuallyDialog: React.FC<AddFlightManuallyDialogProps> = (
                   Departure Date <span className="text-red-500">*</span>
                 </Label>
                 <DatePicker
-                  date={departureDate}
+                  value={departureDate}
                   onChange={(date) => {
                     setDepartureDate(date)
                     setTouched({ ...touched, departureDate: true })
