@@ -16,7 +16,7 @@ export const getUsersPassengerDetails = async (
   signal?: AbortSignal
 ): Promise<PassengerDetailsResponse | ApiError> => {
   try {
-    const url = `${BASE_API_URL}/passenger/getUsersPassengerDetails`;
+    const url = `${BASE_API_URL}/passenger/getUsersPassengerDetails?type=flightStatsNotRequired`;
     const jwtToken = getJwtToken();
 
     const response = await fetch(url, {
