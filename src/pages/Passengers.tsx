@@ -403,11 +403,20 @@ const Passengers = () => {
       console.log('Passport upload API response:', result)
 
       if (result.success && result.data) {
-        // Check if we have LLM results (extracted passport data)
-        if (result.data.llmResult && result.data.llmResult.length > 0) {
-          const extractedData = result.data.llmResult[0]
+        // Check for passportData first, then fall back to llmResult
+        let extractedData = null
+        if (result.data.passportData) {
+          extractedData = result.data.passportData
+        } else if (result.data.llmResult && result.data.llmResult.length > 0) {
+          extractedData = result.data.llmResult[0]
+        }
 
-          if (extractedData.is_passport) {
+        if (extractedData) {
+          // Check if it's a valid passport (either has is_passport flag or has passport data)
+          const isValidPassport = extractedData.is_passport !== false && 
+            (extractedData.is_passport === true || extractedData.passport_number || extractedData.nationality)
+
+          if (isValidPassport) {
             // Format dates from YYYY-MM-DD to DD/MM/YYYY
             const formatDate = (dateStr: string) => {
               if (!dateStr) return ''
@@ -436,6 +445,30 @@ const Passengers = () => {
             }
             if (!addData.lastName && extractedData.last_name) {
               setAddData(prev => ({ ...prev, lastName: extractedData.last_name }))
+            }
+
+            // Find country code from nationality name (API returns country name like "India")
+            // Match against both country name and nationality field (case-insensitive)
+            let countryCode = ''
+            if (extractedData.nationality) {
+              const nationalityLower = extractedData.nationality.toLowerCase().trim()
+              const matchingCountry = countries.find(
+                country => 
+                  country.name.toLowerCase() === nationalityLower ||
+                  country.nationality.toLowerCase() === nationalityLower
+              )
+              if (matchingCountry) {
+                countryCode = matchingCountry.code
+              }
+            }
+
+            // Auto-fill nationality and country of residence if we found a match
+            if (countryCode) {
+              setAddData(prev => ({ 
+                ...prev, 
+                nationality: countryCode,
+                countryOfResidence: countryCode
+              }))
             }
 
             // Set extracted passport data
