@@ -447,6 +447,11 @@ const Passengers = () => {
               setAddData(prev => ({ ...prev, lastName: extractedData.last_name }))
             }
 
+            // Auto-fill date of birth if available (API returns in YYYY-MM-DD format)
+            if (!addData.dateOfBirth && extractedData.date_of_birth) {
+              setAddData(prev => ({ ...prev, dateOfBirth: extractedData.date_of_birth }))
+            }
+
             // Find country code from nationality name (API returns country name like "India")
             // Match against both country name and nationality field (case-insensitive)
             let countryCode = ''
@@ -481,6 +486,7 @@ const Passengers = () => {
             if (extractedData.first_name) extractedFields.push('First Name')
             if (extractedData.last_name) extractedFields.push('Last Name')
             if (extractedData.passport_number) extractedFields.push('Passport Number')
+            if (extractedData.date_of_birth) extractedFields.push('Date of Birth')
             if (extractedData.date_of_expiry) extractedFields.push('Expiry Date')
             if (extractedData.nationality) extractedFields.push('Nationality')
             if (extractedData.issue_place) extractedFields.push('Place of Issue')
