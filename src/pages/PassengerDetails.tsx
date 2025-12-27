@@ -207,39 +207,110 @@ const PassengerDetails = () => {
   };
 
   // Helper function to normalize nationality and country values
+  // Handles: country code (e.g., "IN"), country name (e.g., "India"), or nationality (e.g., "Indian")
   const normalizeNationality = (nationality: string): string => {
     if (!nationality) return "";
 
+    const normalizedValue = nationality.trim();
+
     // First, check if it's already a country code (2 letters)
-    if (nationality.length === 2) {
-      const upperCode = nationality.toUpperCase();
+    if (normalizedValue.length === 2) {
+      const upperCode = normalizedValue.toUpperCase();
       const matchingCountry = countries.find(
         (country) => country.code === upperCode
       );
-      return matchingCountry ? upperCode : "";
+      if (matchingCountry) {
+        console.log('Matched country code:', upperCode, 'for input:', nationality);
+        return upperCode;
+      }
     }
 
-    // Convert to proper case and find matching nationality in countries array
-    const normalizedNationality = nationality.toLowerCase();
-    const matchingCountry = countries.find(
-      (country) => country.nationality.toLowerCase() === normalizedNationality
+    // Convert to lowercase for case-insensitive matching
+    const normalizedLower = normalizedValue.toLowerCase();
+
+    // Try to match against country name first (e.g., "India")
+    let matchingCountry = countries.find(
+      (country) => country.name.toLowerCase() === normalizedLower
     );
 
-    return matchingCountry ? matchingCountry.code : "";
+    // If no match, try to match against nationality (e.g., "Indian")
+    if (!matchingCountry) {
+      matchingCountry = countries.find(
+        (country) => country.nationality.toLowerCase() === normalizedLower
+      );
+    }
+
+    // If still no match, try partial matching (e.g., "India" might match "India" even with extra spaces)
+    if (!matchingCountry) {
+      matchingCountry = countries.find(
+        (country) => 
+          country.name.toLowerCase().includes(normalizedLower) ||
+          normalizedLower.includes(country.name.toLowerCase()) ||
+          country.nationality.toLowerCase().includes(normalizedLower) ||
+          normalizedLower.includes(country.nationality.toLowerCase())
+      );
+    }
+
+    if (matchingCountry) {
+      console.log('Matched country:', matchingCountry.name, 'Code:', matchingCountry.code, 'for input:', nationality);
+      return matchingCountry.code;
+    }
+
+    console.warn('No matching country found for nationality:', nationality);
+    return "";
   };
 
+  // Helper function to normalize country of residence
+  // Handles: country code (e.g., "IN"), country name (e.g., "India"), or nationality (e.g., "Indian")
+  // Returns: country name in lowercase (as expected by the dropdown)
   const normalizeCountryOfResidence = (countryName: string): string => {
     if (!countryName) return "";
 
-    // Convert to proper case and find matching country name in countries array
-    const normalizedCountryName = countryName.toLowerCase();
-    const matchingCountry = countries.find(
-      (country) => country.name.toLowerCase() === normalizedCountryName
+    const normalizedValue = countryName.trim();
+    const normalizedLower = normalizedValue.toLowerCase();
+
+    // First, check if it's already a country code (2 letters)
+    if (normalizedValue.length === 2) {
+      const upperCode = normalizedValue.toUpperCase();
+      const matchingCountry = countries.find(
+        (country) => country.code === upperCode
+      );
+      if (matchingCountry) {
+        console.log('Matched country code for residence:', upperCode, '->', matchingCountry.name.toLowerCase());
+        return matchingCountry.name.toLowerCase();
+      }
+    }
+
+    // Try to match against country name first (e.g., "India")
+    let matchingCountry = countries.find(
+      (country) => country.name.toLowerCase() === normalizedLower
     );
 
-    return matchingCountry
-      ? matchingCountry.name.toLowerCase()
-      : countryName.toLowerCase();
+    // If no match, try to match against nationality (e.g., "Indian")
+    if (!matchingCountry) {
+      matchingCountry = countries.find(
+        (country) => country.nationality.toLowerCase() === normalizedLower
+      );
+    }
+
+    // If still no match, try partial matching
+    if (!matchingCountry) {
+      matchingCountry = countries.find(
+        (country) => 
+          country.name.toLowerCase().includes(normalizedLower) ||
+          normalizedLower.includes(country.name.toLowerCase()) ||
+          country.nationality.toLowerCase().includes(normalizedLower) ||
+          normalizedLower.includes(country.nationality.toLowerCase())
+      );
+    }
+
+    if (matchingCountry) {
+      console.log('Matched country for residence:', matchingCountry.name, 'for input:', countryName);
+      return matchingCountry.name.toLowerCase();
+    }
+
+    console.warn('No matching country found for country of residence:', countryName);
+    return normalizedLower; // Return lowercase version as fallback
   };
 
   // Helper function to get nationality display value

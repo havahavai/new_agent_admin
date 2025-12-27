@@ -155,9 +155,16 @@ export const FlightList: React.FC<FlightListProps> = ({
                   {(() => {
                     const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus, flight.statusMessage)
                     return (
-                      <Badge className={statusInfo.colorClass} variant="outline">
-                        {statusInfo.displayStatus}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge className={statusInfo.colorClass} variant="outline">
+                          {statusInfo.displayStatus}
+                        </Badge>
+                        {statusInfo.statusMessage && (
+                          <div className="text-xs text-gray-600 text-right max-w-[200px]">
+                            {statusInfo.statusMessage}
+                          </div>
+                        )}
+                      </div>
                     )
                   })()}
                 </div>
@@ -200,9 +207,16 @@ export const FlightList: React.FC<FlightListProps> = ({
                   {(() => {
                     const statusInfo = getCheckinStatusInfo(flight.checkInStatus, flight.checkInSubStatus, flight.statusMessage)
                     return (
-                      <Badge className={statusInfo.colorClass} variant="outline">
-                        {statusInfo.displayStatus}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge className={statusInfo.colorClass} variant="outline">
+                          {statusInfo.displayStatus}
+                        </Badge>
+                        {statusInfo.statusMessage && (
+                          <div className="text-xs text-gray-600 text-right max-w-[200px]">
+                            {statusInfo.statusMessage}
+                          </div>
+                        )}
+                      </div>
                     )
                   })()}
 
