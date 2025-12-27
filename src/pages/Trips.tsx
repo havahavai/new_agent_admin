@@ -100,6 +100,9 @@ const Trips = () => {
   }, [dateCarouselData])
 
   useEffect(() => {
+    // Clear flights first to prevent duplicates when switching dates
+    setFlights([])
+    // Then fetch and set flights for the selected date
     const flightsForDate = getFlightsForDate(selectedDate)
     setFlights(flightsForDate)
   }, [selectedDate])

@@ -38,6 +38,11 @@ export const getUserSpecificInfo = async (
       throw new Error("Invalid response format from server");
     }
 
+    // Validate sortedData if present
+    if (data.data.sortedData && typeof data.data.sortedData !== 'object') {
+      throw new Error("Invalid sortedData format from server");
+    }
+
     return data;
   } catch (error) {
     console.error("Error fetching user specific info:", error);

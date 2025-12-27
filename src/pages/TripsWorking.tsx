@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FlightList } from '@/components/ui/flight-list'
 import { getUserSpecificInfo, FlightData, UserSpecificInfoResponse, ApiError } from '@/api'
-import { getDateCarouselDataForApi, findFirstDateWithFlights } from '@/data/flights'
+import { findFirstDateWithFlights } from '@/data/flights'
 import FloatingActionButton from '@/components/FloatingActionButton'
 import AddFlightManuallyDialog from '@/components/AddFlightManuallyDialog'
 import UploadTicketDialog from '@/components/UploadTicketDialog'
@@ -26,61 +26,41 @@ const getUTCDateString = (isoString: string): string => {
          String(date.getUTCDate()).padStart(2, '0')
 }
 
-// Helper function to group flights by departure date
-const groupFlightsByDate = (flights: FlightData[]) => {
-  const grouped: { [key: string]: FlightData[] } = {}
+// Helper function to get date string from Date object (YYYY-MM-DD format)
+const getDateString = (date: Date): string => {
+  return date.getUTCFullYear() + '-' +
+         String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+         String(date.getUTCDate()).padStart(2, '0')
+}
 
-  flights.forEach(flight => {
-    const departureDate = getUTCDateString(flight.departureTime)
-    if (!grouped[departureDate]) {
-      grouped[departureDate] = []
-    }
-    grouped[departureDate].push(flight)
-  })
+// Helper function to generate carousel data from sortedData
+const getDateCarouselDataFromSortedData = (
+  sortedData: { [key: string]: FlightData[] } | undefined,
+  options?: { days?: number; startDate?: Date }
+) => {
+  const days = options?.days ?? 30
+  const startDate = options?.startDate ?? new Date()
+  
+  // Generate date range
+  const dates: Date[] = []
+  for (let i = 0; i < days; i++) {
+    const date = new Date(startDate)
+    date.setDate(startDate.getDate() + i)
+    dates.push(date)
+  }
 
-  // Convert to carousel format
-  const carouselData = Object.keys(grouped).map(dateString => {
-    const date = new Date(dateString + 'T00:00:00.000Z') // Create UTC date
-    const flightsForDate = grouped[dateString]
+  // Map dates to carousel format using sortedData
+  return dates.map((date) => {
+    const dateString = getDateString(date)
+    const flightsForDate = sortedData?.[dateString] || []
     return {
       date,
       hasFlights: flightsForDate.length > 0,
-      flightCount: flightsForDate.length
+      flightCount: flightsForDate.length,
     }
-  }).sort((a, b) => a.date.getTime() - b.date.getTime())
-
-  return carouselData
+  })
 }
 
-// Helper function to get flights for selected date
-const getFlightsForSelectedDate = (flights: FlightData[], selectedDate: Date) => {
-  const selectedDateString = getUTCDateString(selectedDate.toISOString())
-  return flights.filter(flight => {
-    const flightDate = getUTCDateString(flight.departureTime)
-    return flightDate === selectedDateString
-  }).map(flight => ({
-    id: flight.flightId,
-    flightNumber: flight.flightNumber,
-    airline: flight.airline,
-    route: {
-      from: flight.departureAirport,
-      to: flight.arrivalAirport,
-      fromCode: flight.departureAirport,
-      toCode: flight.arrivalAirport
-    },
-    departure: extractTimeFromISO(flight.departureTime),
-    arrival: extractTimeFromISO(flight.arrivalTime),
-    checkInStatus: flight.checkInStatus,
-    checkInSubStatus: flight.checkInSubStatus, // Add the missing checkInSubStatus field
-    passengers: parseInt(flight.numberOfPassengers),
-    aircraft: flight.airline, // Use airline as aircraft for now
-    webCheckinStatus: flight.checkInStatus === 'NONE' ? 'Scheduled' :
-                     flight.checkInStatus === 'FAILED' ? 'Failed' : 'Completed' as any,
-    flightType: flight.isInternational ? 'International' : 'Domestic' as any,
-    ticketId: flight.ticketId,
-    status: flight.checkInStatus === 'FAILED' ? 'Delayed' : 'On Time' as any
-  }))
-}
 
 // Simple date carousel component
 const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect, onLoadNext }: any) => {
@@ -206,12 +186,12 @@ const TripsWorking = () => {
   const [carouselDays, setCarouselDays] = useState(30) // Track how many days to show
   // Initialize with today + next 30 days immediately
   const [dateCarouselData, setDateCarouselData] = useState<any[]>(() =>
-    getDateCarouselDataForApi([], { days: 30, startDate: new Date() })
+    getDateCarouselDataFromSortedData(undefined, { days: 30, startDate: new Date() })
   )
   const [flights, setFlights] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [apiFlights, setApiFlights] = useState<FlightData[]>([])
+  const [sortedData, setSortedData] = useState<{ [key: string]: FlightData[] } | undefined>(undefined)
 
   // Dialog states
   const [isAddManuallyDialogOpen, setIsAddManuallyDialogOpen] = useState(false)
@@ -235,10 +215,13 @@ const TripsWorking = () => {
 
         if ('success' in response && response.success) {
           const userResponse = response as UserSpecificInfoResponse
-          setApiFlights(userResponse.data.flightsData)
+          
+          // Use sortedData if available, otherwise fallback to flightsData
+          const dataToUse = userResponse.data.sortedData || {}
+          setSortedData(dataToUse)
 
-          // Create carousel data for today + current days range regardless of flight availability
-          const carouselData = getDateCarouselDataForApi(userResponse.data.flightsData, { days: carouselDays, startDate: carouselStartDate })
+          // Create carousel data from sortedData
+          const carouselData = getDateCarouselDataFromSortedData(dataToUse, { days: carouselDays, startDate: carouselStartDate })
           setDateCarouselData(carouselData)
 
           // Set initial date to first date with flights or today if no flights
@@ -247,9 +230,9 @@ const TripsWorking = () => {
         } else {
           const errorResponse = response as ApiError
           setError(errorResponse.message)
-          setApiFlights([])
+          setSortedData(undefined)
           // Still show date carousel even if API fails - show today + current days range
-          const carouselData = getDateCarouselDataForApi([], { days: carouselDays, startDate: carouselStartDate })
+          const carouselData = getDateCarouselDataFromSortedData(undefined, { days: carouselDays, startDate: carouselStartDate })
           setDateCarouselData(carouselData)
           // Set selected date to today when no flights
           setSelectedDate(new Date())
@@ -259,9 +242,9 @@ const TripsWorking = () => {
           return
         }
         setError('Failed to load flights')
-        setApiFlights([])
+        setSortedData(undefined)
         // Still show date carousel even on error - show today + current days range
-        const carouselData = getDateCarouselDataForApi([], { days: carouselDays, startDate: carouselStartDate })
+        const carouselData = getDateCarouselDataFromSortedData(undefined, { days: carouselDays, startDate: carouselStartDate })
         setDateCarouselData(carouselData)
         // Set selected date to today when no flights
         setSelectedDate(new Date())
@@ -282,7 +265,7 @@ const TripsWorking = () => {
 
   // Update carousel data when carouselDays changes
   useEffect(() => {
-    const carouselData = getDateCarouselDataForApi(apiFlights, { days: carouselDays, startDate: carouselStartDate })
+    const carouselData = getDateCarouselDataFromSortedData(sortedData, { days: carouselDays, startDate: carouselStartDate })
     setDateCarouselData(carouselData)
 
     // Only update selected date if current selection has no flights and we can find a better option
@@ -297,20 +280,51 @@ const TripsWorking = () => {
         }
       }
     }
-  }, [carouselDays, apiFlights, carouselStartDate])
+  }, [carouselDays, sortedData, carouselStartDate])
 
   useEffect(() => {
-    if (apiFlights.length > 0) {
-      // Filter API flights for selected date
-      const flightsForDate = getFlightsForSelectedDate(apiFlights, selectedDate)
-      setFlights(flightsForDate)
+    // Clear old flights first to prevent duplication
+    setFlights([])
+    
+    if (sortedData) {
+      // Get date string in YYYY-MM-DD format
+      const dateString = getDateString(selectedDate)
+      const flightsForDate = sortedData[dateString] || []
+      
+      // Transform flights to the format expected by FlightList
+      const transformedFlights = flightsForDate.map(flight => ({
+        id: flight.flightId,
+        flightNumber: flight.flightNumber,
+        airline: flight.airline,
+        route: {
+          from: flight.departureAirport,
+          to: flight.arrivalAirport,
+          fromCode: flight.departureAirport,
+          toCode: flight.arrivalAirport
+        },
+        departure: extractTimeFromISO(flight.departureTime),
+        arrival: extractTimeFromISO(flight.arrivalTime),
+        checkInStatus: flight.checkInStatus,
+        checkInSubStatus: flight.checkInSubStatus,
+        passengers: parseInt(flight.numberOfPassengers),
+        aircraft: flight.airline,
+        webCheckinStatus: flight.checkInStatus === 'NONE' ? 'Scheduled' :
+                         flight.checkInStatus === 'FAILED' ? 'Failed' : 'Completed' as any,
+        flightType: flight.isInternational ? 'International' : 'Domestic' as any,
+        ticketId: flight.ticketId,
+        status: flight.checkInStatus === 'FAILED' ? 'Delayed' : 'On Time' as any
+      }))
+      
+      setFlights(transformedFlights)
     } else {
-      // No flights available
+      // No sortedData available
       setFlights([])
     }
-  }, [selectedDate, apiFlights])
+  }, [selectedDate, sortedData])
 
   const handleDateSelect = (date: Date) => {
+    // Clear old flights first to prevent duplication
+    setFlights([])
     setSelectedDate(date)
   }
 
@@ -325,10 +339,13 @@ const TripsWorking = () => {
       const refreshResponse = await getUserSpecificInfo()
       if ('success' in refreshResponse && refreshResponse.success) {
         const userResponse = refreshResponse as UserSpecificInfoResponse
-        setApiFlights(userResponse.data.flightsData)
+        
+        // Use sortedData if available, otherwise fallback to empty object
+        const dataToUse = userResponse.data.sortedData || {}
+        setSortedData(dataToUse)
 
         // Update carousel data
-        const carouselData = getDateCarouselDataForApi(userResponse.data.flightsData, { days: carouselDays, startDate: carouselStartDate })
+        const carouselData = getDateCarouselDataFromSortedData(dataToUse, { days: carouselDays, startDate: carouselStartDate })
         setDateCarouselData(carouselData)
       }
     } catch (err) {
@@ -343,10 +360,13 @@ const TripsWorking = () => {
       const refreshResponse = await getUserSpecificInfo()
       if ('success' in refreshResponse && refreshResponse.success) {
         const userResponse = refreshResponse as UserSpecificInfoResponse
-        setApiFlights(userResponse.data.flightsData)
+        
+        // Use sortedData if available, otherwise fallback to empty object
+        const dataToUse = userResponse.data.sortedData || {}
+        setSortedData(dataToUse)
 
         // Update carousel data
-        const carouselData = getDateCarouselDataForApi(userResponse.data.flightsData, { days: carouselDays, startDate: carouselStartDate })
+        const carouselData = getDateCarouselDataFromSortedData(dataToUse, { days: carouselDays, startDate: carouselStartDate })
         setDateCarouselData(carouselData)
       }
     } catch (err) {

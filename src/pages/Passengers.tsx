@@ -401,17 +401,22 @@ const Passengers = () => {
 
       const result = await response.json()
       console.log('Passport upload API response:', result)
+      console.log('Full result.data:', result.data)
 
       if (result.success && result.data) {
         // Check for passportData first, then fall back to llmResult
         let extractedData = null
         if (result.data.passportData) {
           extractedData = result.data.passportData
+          console.log('Using passportData:', extractedData)
         } else if (result.data.llmResult && result.data.llmResult.length > 0) {
           extractedData = result.data.llmResult[0]
+          console.log('Using llmResult[0]:', extractedData)
         }
 
         if (extractedData) {
+          console.log('Extracted data nationality:', extractedData.nationality)
+          console.log('Extracted data issue_place:', extractedData.issue_place)
           // Check if it's a valid passport (either has is_passport flag or has passport data)
           const isValidPassport = extractedData.is_passport !== false && 
             (extractedData.is_passport === true || extractedData.passport_number || extractedData.nationality)
@@ -439,45 +444,72 @@ const Passengers = () => {
               nationality: extractedData.nationality || ''
             }
 
-            // Auto-fill name fields if they're empty
-            if (!addData.firstName && extractedData.first_name) {
-              setAddData(prev => ({ ...prev, firstName: extractedData.first_name }))
-            }
-            if (!addData.lastName && extractedData.last_name) {
-              setAddData(prev => ({ ...prev, lastName: extractedData.last_name }))
-            }
-
-            // Auto-fill date of birth if available (API returns in YYYY-MM-DD format)
-            if (!addData.dateOfBirth && extractedData.date_of_birth) {
-              setAddData(prev => ({ ...prev, dateOfBirth: extractedData.date_of_birth }))
-            }
-
             // Find country code from nationality name (API returns country name like "India")
             // Match against both country name and nationality field (case-insensitive)
             let countryCode = ''
             if (extractedData.nationality) {
               const nationalityLower = extractedData.nationality.toLowerCase().trim()
-              const matchingCountry = countries.find(
+              
+              // Try exact match first
+              let matchingCountry = countries.find(
                 country => 
                   country.name.toLowerCase() === nationalityLower ||
                   country.nationality.toLowerCase() === nationalityLower
               )
+              
+              // If no exact match, try partial match (e.g., "India" might match "India" even with extra spaces)
+              if (!matchingCountry) {
+                matchingCountry = countries.find(
+                  country => 
+                    country.name.toLowerCase().includes(nationalityLower) ||
+                    nationalityLower.includes(country.name.toLowerCase()) ||
+                    country.nationality.toLowerCase().includes(nationalityLower) ||
+                    nationalityLower.includes(country.nationality.toLowerCase())
+                )
+              }
+              
               if (matchingCountry) {
                 countryCode = matchingCountry.code
+                console.log('Found matching country:', matchingCountry.name, 'Code:', countryCode, 'for input:', extractedData.nationality)
+              } else {
+                console.log('No matching country found for nationality:', extractedData.nationality)
+                console.log('Available countries sample:', countries.slice(0, 5).map(c => c.name))
               }
             }
 
-            // Auto-fill nationality and country of residence if we found a match
-            if (countryCode) {
-              setAddData(prev => ({ 
-                ...prev, 
-                nationality: countryCode,
-                countryOfResidence: countryCode
-              }))
-            }
+            // Consolidate all state updates into a single call to ensure atomic updates
+            setAddData(prev => {
+              const updates: Partial<typeof addData> = {}
+              
+              // Auto-fill name fields if they're empty
+              if (!prev.firstName && extractedData.first_name) {
+                updates.firstName = extractedData.first_name
+              }
+              if (!prev.lastName && extractedData.last_name) {
+                updates.lastName = extractedData.last_name
+              }
+              
+              // Auto-fill date of birth if available (API returns in YYYY-MM-DD format)
+              if (!prev.dateOfBirth && extractedData.date_of_birth) {
+                updates.dateOfBirth = extractedData.date_of_birth
+              }
+              
+              // Always set nationality and country of residence if we found a match (overwrite existing values)
+              if (countryCode) {
+                updates.nationality = countryCode
+                updates.countryOfResidence = countryCode
+                console.log('Setting nationality and countryOfResidence to:', countryCode)
+              } else if (extractedData.nationality) {
+                console.warn('Could not find country code for nationality:', extractedData.nationality)
+              }
+              
+              console.log('Updating addData with:', updates)
+              return { ...prev, ...updates }
+            })
 
-            // Set extracted passport data
+            // Set extracted passport data (including place of issue)
             setExtractedPassportData(extractedPassportData)
+            console.log('Set extractedPassportData:', extractedPassportData)
             setHasPassportData(true)
             setPassportUploadSuccess('Passport uploaded and data extracted successfully!')
 
@@ -1357,6 +1389,7 @@ const Passengers = () => {
                 <div>
                   <Label htmlFor="addNationality" className="text-sm font-medium">Country of Nationality</Label>
                   <Select
+                    key={`nationality-${addData.nationality}`}
                     value={addData.nationality}
                     onValueChange={(value) => setAddData(prev => ({ ...prev, nationality: value }))}
                   >
@@ -1375,6 +1408,7 @@ const Passengers = () => {
                 <div>
                   <Label htmlFor="addCountryOfResidence" className="text-sm font-medium">Country of Residence</Label>
                   <Select
+                    key={`residence-${addData.countryOfResidence}`}
                     value={addData.countryOfResidence}
                     onValueChange={(value) => setAddData(prev => ({ ...prev, countryOfResidence: value }))}
                   >

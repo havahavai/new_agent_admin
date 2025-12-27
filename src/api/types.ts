@@ -23,6 +23,7 @@ export interface UserSpecificInfoResponse {
   success: boolean;
   data: {
     flightsData: FlightData[];
+    sortedData?: { [key: string]: FlightData[] };
   };
 }
 
