@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, User, Mail, Phone, Users, Pencil, ChevronUp, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import PhoneInput from 'react-phone-number-input'
-import 'react-phone-number-input/style.css'
 import { getClients, addClient, updateClient, mergeClients, Client, AddClientPayload, UpdateClientPayload, MergeClientsPayload } from '@/api/clients.service'
 import { ApiError } from '@/api/types'
 
@@ -39,7 +37,11 @@ const Clients = () => {
     email: '',
     phone: '',
     type: 'individual' as 'individual' | 'corporate',
-    countryCode: ''
+    countryCode: '+91' // Default to India
+  })
+  const [addErrors, setAddErrors] = useState({
+    email: '',
+    phone: ''
   })
 
   // Edit client state
@@ -48,6 +50,10 @@ const Clients = () => {
     phone: '',
     countryCode: '',
     type: 'individual' as 'individual' | 'corporate'
+  })
+  const [editErrors, setEditErrors] = useState({
+    email: '',
+    phone: ''
   })
 
   // Merge state
@@ -225,6 +231,33 @@ const Clients = () => {
     }
   }
 
+  // Validation functions
+  const validateEmail = (email: string): string => {
+    if (!email || !email.trim()) {
+      return 'Email is required'
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      return 'Please enter a valid email address'
+    }
+    return ''
+  }
+
+  const validatePhone = (phone: string, countryCode: string): string => {
+    if (phone && phone.trim()) {
+      // If phone is provided, validate it's numeric
+      const phoneRegex = /^\d+$/
+      if (!phoneRegex.test(phone.trim())) {
+        return 'Phone number must contain only digits'
+      }
+      // If phone is provided, country code should also be provided
+      if (!countryCode || !countryCode.trim()) {
+        return 'Country code is required when phone number is provided'
+      }
+    }
+    return ''
+  }
+
   // Add client handlers
   const handleAddClient = () => {
     setAddData({
@@ -232,8 +265,9 @@ const Clients = () => {
       email: '',
       phone: '',
       type: 'individual',
-      countryCode: ''
+      countryCode: '+91' // Default to India
     })
+    setAddErrors({ email: '', phone: '' })
     setShowAddDialog(true)
   }
 
@@ -242,31 +276,34 @@ const Clients = () => {
       setIsAdding(true)
       setError(null)
 
-      if (!addData.name || !addData.email) {
-        setError('Name and email are required')
+      // Validate fields
+      const emailError = validateEmail(addData.email)
+      const phoneError = validatePhone(addData.phone, addData.countryCode)
+      
+      setAddErrors({
+        email: emailError,
+        phone: phoneError
+      })
+
+      if (!addData.name || !addData.name.trim()) {
+        setError('Name is required')
         setIsAdding(false)
         return
       }
 
-      // Extract country code from phone if phone is provided
-      let countryCode = addData.countryCode
-      let phone = addData.phone
-      
-      if (phone && !countryCode) {
-        // Try to extract country code from phone number
-        const phoneMatch = phone.match(/^\+(\d+)/)
-        if (phoneMatch) {
-          countryCode = phoneMatch[1]
-          phone = phone.replace(/^\+\d+/, '')
-        }
+      if (emailError || phoneError) {
+        setIsAdding(false)
+        return
       }
 
+      // Use country code and phone directly from form - no extraction needed
+      // Only include countryCode if phone is provided
       const payload: AddClientPayload = {
-        name: addData.name,
-        email: addData.email,
-        phone: phone || undefined,
+        name: addData.name.trim(),
+        email: addData.email.trim(),
+        phone: addData.phone.trim() || undefined,
         type: addData.type,
-        countryCode: countryCode || undefined
+        countryCode: addData.phone.trim() ? (addData.countryCode || undefined) : undefined
       }
 
       const result = await addClient(payload)
@@ -283,8 +320,9 @@ const Clients = () => {
           email: '',
           phone: '',
           type: 'individual',
-          countryCode: ''
+          countryCode: '+91' // Default to India
         })
+        setAddErrors({ email: '', phone: '' })
       } else {
         setError(result.message || 'Failed to add client')
       }
@@ -296,15 +334,68 @@ const Clients = () => {
     }
   }
 
+  // Common country codes
+  const countryCodes = [
+    { code: '+1', name: 'United States (+1)' },
+    { code: '+44', name: 'United Kingdom (+44)' },
+    { code: '+91', name: 'India (+91)' },
+    { code: '+86', name: 'China (+86)' },
+    { code: '+81', name: 'Japan (+81)' },
+    { code: '+49', name: 'Germany (+49)' },
+    { code: '+33', name: 'France (+33)' },
+    { code: '+39', name: 'Italy (+39)' },
+    { code: '+34', name: 'Spain (+34)' },
+    { code: '+61', name: 'Australia (+61)' },
+    { code: '+7', name: 'Russia (+7)' },
+    { code: '+971', name: 'UAE (+971)' },
+    { code: '+966', name: 'Saudi Arabia (+966)' },
+    { code: '+65', name: 'Singapore (+65)' },
+    { code: '+60', name: 'Malaysia (+60)' },
+    { code: '+66', name: 'Thailand (+66)' },
+    { code: '+84', name: 'Vietnam (+84)' },
+    { code: '+62', name: 'Indonesia (+62)' },
+    { code: '+63', name: 'Philippines (+63)' },
+    { code: '+82', name: 'South Korea (+82)' },
+  ]
+
   // Edit client handlers
   const handleEditClient = (client: Client) => {
     setEditingClient(client)
+    
+    // Extract phone number and country code properly
+    let phoneNumber = client.phone || ''
+    let countryCode = client.countryCode || ''
+    
+    // Normalize country code to include "+" if it doesn't have it
+    if (countryCode && !countryCode.startsWith('+')) {
+      countryCode = '+' + countryCode
+    }
+    
+    // If phone contains country code prefix, extract it
+    if (phoneNumber && phoneNumber.startsWith('+')) {
+      // Try to match country codes from longest to shortest
+      const matchedCode = countryCodes
+        .sort((a, b) => b.code.length - a.code.length)
+        .find(cc => phoneNumber.startsWith(cc.code))
+      
+      if (matchedCode) {
+        countryCode = matchedCode.code
+        phoneNumber = phoneNumber.substring(matchedCode.code.length).trim()
+      }
+    }
+    
+    // Set default to +91 if no country code exists
+    if (!countryCode) {
+      countryCode = '+91'
+    }
+    
     setEditData({
       name: client.name || '',
-      phone: client.phone || '',
-      countryCode: client.countryCode || '',
+      phone: phoneNumber,
+      countryCode: countryCode,
       type: client.type || 'individual'
     })
+    setEditErrors({ email: '', phone: '' })
     setShowEditDialog(true)
   }
 
@@ -322,30 +413,32 @@ const Clients = () => {
         return
       }
 
-      if (!editData.name) {
+      if (!editData.name || !editData.name.trim()) {
         setError('Name is required')
         setIsUpdating(false)
         return
       }
 
-      // Extract country code from phone if phone is provided
-      let countryCode = editData.countryCode
-      let phone = editData.phone
-      
-      if (phone && !countryCode) {
-        const phoneMatch = phone.match(/^\+(\d+)/)
-        if (phoneMatch) {
-          countryCode = phoneMatch[1]
-          phone = phone.replace(/^\+\d+/, '')
-        }
+      // Validate phone
+      const phoneError = validatePhone(editData.phone, editData.countryCode)
+      setEditErrors({
+        email: '',
+        phone: phoneError
+      })
+
+      if (phoneError) {
+        setIsUpdating(false)
+        return
       }
 
+      // Use country code and phone directly from form - no extraction needed
+      // Only include countryCode if phone is provided
       const payload: UpdateClientPayload = {
         clientId: editingClient.clientId,
         updates: {
-          name: editData.name,
-          phone: phone || undefined,
-          countryCode: countryCode || undefined,
+          name: editData.name.trim(),
+          phone: editData.phone.trim() || undefined,
+          countryCode: editData.phone.trim() ? (editData.countryCode || undefined) : undefined,
           type: editData.type
         }
       }
@@ -558,7 +651,9 @@ const Clients = () => {
                       {client.phone ? (
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="text-gray-700">{client.phone}</span>
+                          <span className="text-gray-700">
+                            {client.countryCode ? `${client.countryCode}${client.phone}` : client.phone}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -682,31 +777,63 @@ const Clients = () => {
                 id="addEmail"
                 type="email"
                 value={addData.email}
-                onChange={(e) => setAddData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => {
+                  setAddData(prev => ({ ...prev, email: e.target.value }))
+                  setAddErrors(prev => ({ ...prev, email: '' }))
+                }}
+                onBlur={() => {
+                  const emailError = validateEmail(addData.email)
+                  setAddErrors(prev => ({ ...prev, email: emailError }))
+                }}
                 placeholder="Enter client email"
-                className="mt-1"
+                className={`mt-1 ${addErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
               />
+              {addErrors.email && (
+                <p className="text-xs text-red-500 mt-1">{addErrors.email}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="addPhone" className="text-sm font-medium">Phone</Label>
-              <div className="mt-1">
-                <PhoneInput
-                  international
-                  defaultCountry="US"
-                  value={addData.phone}
-                  onChange={(value) => {
-                    setAddData(prev => ({ ...prev, phone: value || '' }))
-                    // Extract country code
-                    if (value) {
-                      const match = value.match(/^\+(\d+)/)
-                      if (match) {
-                        setAddData(prev => ({ ...prev, countryCode: match[1] }))
-                      }
-                    }
+              <div className="mt-1 flex gap-2">
+                <Select
+                  value={addData.countryCode}
+                  onValueChange={(value) => {
+                    setAddData(prev => ({ ...prev, countryCode: value }))
+                    setAddErrors(prev => ({ ...prev, phone: '' }))
                   }}
-                  className="phone-input-wrapper"
-                />
+                >
+                  <SelectTrigger className={`w-32 ${addErrors.phone ? 'border-red-500' : ''}`}>
+                    <SelectValue placeholder="Code" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryCodes.map((cc) => (
+                      <SelectItem key={cc.code} value={cc.code}>
+                        {cc.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex-1">
+                  <Input
+                    id="addPhone"
+                    type="tel"
+                    value={addData.phone}
+                    onChange={(e) => {
+                      setAddData(prev => ({ ...prev, phone: e.target.value }))
+                      setAddErrors(prev => ({ ...prev, phone: '' }))
+                    }}
+                    onBlur={() => {
+                      const phoneError = validatePhone(addData.phone, addData.countryCode)
+                      setAddErrors(prev => ({ ...prev, phone: phoneError }))
+                    }}
+                    placeholder="Enter phone number"
+                    className={addErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  />
+                </div>
               </div>
+              {addErrors.phone && (
+                <p className="text-xs text-red-500 mt-1">{addErrors.phone}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="addType" className="text-sm font-medium">Type</Label>
@@ -784,24 +911,46 @@ const Clients = () => {
             )}
             <div>
               <Label htmlFor="editPhone" className="text-sm font-medium">Phone</Label>
-              <div className="mt-1">
-                <PhoneInput
-                  international
-                  defaultCountry="US"
-                  value={editData.phone}
-                  onChange={(value) => {
-                    setEditData(prev => ({ ...prev, phone: value || '' }))
-                    // Extract country code
-                    if (value) {
-                      const match = value.match(/^\+(\d+)/)
-                      if (match) {
-                        setEditData(prev => ({ ...prev, countryCode: match[1] }))
-                      }
-                    }
+              <div className="mt-1 flex gap-2">
+                <Select
+                  value={editData.countryCode}
+                  onValueChange={(value) => {
+                    setEditData(prev => ({ ...prev, countryCode: value }))
+                    setEditErrors(prev => ({ ...prev, phone: '' }))
                   }}
-                  className="phone-input-wrapper"
-                />
+                >
+                  <SelectTrigger className={`w-32 ${editErrors.phone ? 'border-red-500' : ''}`}>
+                    <SelectValue placeholder="Code" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryCodes.map((cc) => (
+                      <SelectItem key={cc.code} value={cc.code}>
+                        {cc.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex-1">
+                  <Input
+                    id="editPhone"
+                    type="tel"
+                    value={editData.phone}
+                    onChange={(e) => {
+                      setEditData(prev => ({ ...prev, phone: e.target.value }))
+                      setEditErrors(prev => ({ ...prev, phone: '' }))
+                    }}
+                    onBlur={() => {
+                      const phoneError = validatePhone(editData.phone, editData.countryCode)
+                      setEditErrors(prev => ({ ...prev, phone: phoneError }))
+                    }}
+                    placeholder="Enter phone number"
+                    className={editErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  />
+                </div>
               </div>
+              {editErrors.phone && (
+                <p className="text-xs text-red-500 mt-1">{editErrors.phone}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="editType" className="text-sm font-medium">Type</Label>
