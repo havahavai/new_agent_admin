@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { loginWithGoogle, loginWithEmailPassword, storeJwtTokenWithValidation, isAuthenticated } from "../api/auth";
+import { loginWithGoogle, loginWithEmailPassword, loginWithBusinessFlyo, storeJwtToken, storeJwtTokenWithValidation, isAuthenticated } from "../api/auth";
 
 const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +25,7 @@ const Login: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated()) {
       // User is already logged in, redirect to main app
-      window.location.href = "/trips";
+      window.location.href = "/booking-calendar";
     }
   }, []);
 
@@ -76,26 +76,49 @@ const Login: React.FC = () => {
         throw new Error("Please enter both email and password");
       }
 
-      // Call the special user authentication API
-      const loginResponse = await loginWithEmailPassword({
-        email,
-        password,
-        role: "agent", // Default role as specified in the API
-      });
-
-      console.log("Email login API response:", loginResponse);
-
-      // Validate and store JWT token with user type validation
+      // Try businessFlyo login first
       try {
-        storeJwtTokenWithValidation(loginResponse.jwtToken, loginResponse.userType);
+        const businessFlyoResponse = await loginWithBusinessFlyo({
+          email,
+          password,
+        });
+
+        console.log("BusinessFlyo login API response:", businessFlyoResponse);
+
+        // Store token and user data
+        storeJwtToken(businessFlyoResponse.token);
+        if (businessFlyoResponse.user) {
+          localStorage.setItem("user", JSON.stringify(businessFlyoResponse.user));
+        }
         console.log("✅ JWT token stored successfully!");
 
         // Redirect to main application
         console.log("Login successful! Redirecting to main app...");
-        window.location.href = "/trips";
-      } catch (validationError) {
-        // Handle user type validation error
-        throw validationError;
+        window.location.href = "/booking-calendar";
+        return;
+      } catch (businessFlyoError) {
+        console.log("BusinessFlyo login failed, trying special user auth:", businessFlyoError);
+        // Fallback to special user authentication API
+        const loginResponse = await loginWithEmailPassword({
+          email,
+          password,
+          role: "agent", // Default role as specified in the API
+        });
+
+        console.log("Email login API response:", loginResponse);
+
+        // Validate and store JWT token with user type validation
+        try {
+          storeJwtTokenWithValidation(loginResponse.jwtToken, loginResponse.userType);
+          console.log("✅ JWT token stored successfully!");
+
+          // Redirect to main application
+          console.log("Login successful! Redirecting to main app...");
+          window.location.href = "/trips";
+        } catch (validationError) {
+          // Handle user type validation error
+          throw validationError;
+        }
       }
 
     } catch (err) {
@@ -185,7 +208,7 @@ const Login: React.FC = () => {
 
             // Redirect to main application
             console.log("Login successful! Redirecting to main app...");
-            window.location.href = "/trips";
+            window.location.href = "/booking-calendar";
           } catch (validationError) {
             // Handle user type validation error
             throw validationError;

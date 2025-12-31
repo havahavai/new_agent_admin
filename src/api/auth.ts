@@ -27,6 +27,32 @@ export interface SpecialUserLoginResponse {
   message: string;
 }
 
+export interface BusinessFlyoLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface BusinessFlyoLoginResponse {
+  success: boolean;
+  data: {
+    token: string;
+    user: {
+      id: number;
+      email: string;
+      name: string;
+      role: string;
+      agentId: number;
+      agentName: string;
+      teamMemberEmail: string;
+      emails?: Array<{
+        email: string;
+        provider: string;
+      }>;
+    };
+  };
+  message: string;
+}
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -180,6 +206,50 @@ export const isAuthenticated = (): boolean => {
 };
 
 /**
+ * Login with email and password for businessFlyo
+ */
+export const loginWithBusinessFlyo = async (
+  credentials: BusinessFlyoLoginRequest
+): Promise<{ token: string; user: BusinessFlyoLoginResponse['data']['user'] }> => {
+  try {
+    console.log("BusinessFlyo login request:", {
+      email: credentials.email,
+    });
+    const response = await fetch(
+      `https://prod-api.flyo.ai/core/v1/businessFlyo/login`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      }
+    );
+
+    const data: BusinessFlyoLoginResponse = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Login failed");
+    }
+
+    if (!data.data.token) {
+      throw new Error("Token not received from login API");
+    }
+
+    return {
+      token: data.data.token,
+      user: data.data.user,
+    };
+  } catch (error) {
+    console.error("BusinessFlyo login API error:", error);
+    throw error;
+  }
+};
+
+/**
  * Logout user by removing JWT token
  */
 export const logout = (): void => {
@@ -187,4 +257,5 @@ export const logout = (): void => {
   // Clear user type and other auth-related data
   localStorage.removeItem("userType");
   localStorage.removeItem("oauthDebugData");
+  localStorage.removeItem("user");
 };
