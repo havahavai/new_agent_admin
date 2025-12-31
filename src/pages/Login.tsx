@@ -301,17 +301,17 @@ const Login: React.FC = () => {
             </form>
 
             {/* Divider */}
-            <div className="relative my-6">
+            {/* <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">Or continue with</span>
               </div>
-            </div>
+            </div> */}
 
             {/* Google Sign-in Button */}
-            <button
+            {/* <button
               onClick={handleGoogleLogin}
               disabled={isLoading}
               className="w-full flex justify-center items-center py-4 px-6 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
@@ -344,7 +344,7 @@ const Login: React.FC = () => {
                   <span>Continue with Google</span>
                 </div>
               )}
-            </button>
+            </button> */}
 
             {/* Try Again Button */}
             {error && (
