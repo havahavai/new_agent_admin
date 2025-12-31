@@ -209,10 +209,10 @@ const Layout = ({ children }: LayoutProps) => {
         }`}>
           <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
             {/* Top section - Agent Info */}
-            <div className="px-4 py-3 border-b border-gray-200">
-              <div className="flex h-14 items-center justify-between">
+            <div className="px-4 py-2">
+              <div className="flex h-12 items-center justify-between">
                 <div className="flex items-center min-w-0">
-                  <div className="w-8 h-8 bg-white border border-gray-200 rounded-md flex items-center justify-center mr-2 flex-shrink-0">
+                  <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center mr-2 flex-shrink-0">
                     <img src={logoSvg} alt={userData?.agentName || 'HavaHavai'} className="h-5 w-5" />
                   </div>
                   {!isSidebarCollapsed && (
@@ -236,7 +236,7 @@ const Layout = ({ children }: LayoutProps) => {
 
             {/* Collapse button when collapsed */}
             {isSidebarCollapsed && (
-              <div className="px-2 py-3 border-b border-gray-200">
+              <div className="px-2 py-3">
                 <button
                   onClick={toggleSidebar}
                   className="w-full p-2 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center"
@@ -252,7 +252,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <>
                   {/* Bookings Section */}
                   <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-[10px] font-normal text-gray-400 uppercase tracking-wider leading-tight">Bookings</h2>
+                    <h2 className="text-[10px] font-normal text-gray-500 uppercase tracking-wider leading-tight">Bookings</h2>
                   </div>
                   <div className="px-2 pb-3">
                     {navigation.filter(item => item.section === 'Bookings').map((item) => {
@@ -266,16 +266,16 @@ const Layout = ({ children }: LayoutProps) => {
                           <div key={item.name}>
                             <button
                               onClick={() => toggleExpanded(item.name)}
-                              className={`group flex items-center w-full px-3 py-2 text-xs font-medium rounded-md leading-normal ${
+                              className={`group flex items-center w-full px-3 py-2 text-xs rounded-md leading-normal ${
                                 isItemActive
-                                  ? 'bg-gray-100 text-gray-900'
-                                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                                  ? 'bg-gray-100 text-gray-900 font-bold'
+                                  : 'text-gray-600 font-normal hover:bg-gray-50 hover:text-gray-900'
                               }`}
                             >
                               <Icon className="h-5 w-5 mr-3 text-gray-600" />
                               <span className="flex-1 text-left">{item.name}</span>
                               <ChevronDown
-                                className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                className={`h-4 w-4 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                               />
                             </button>
                             {isExpanded && item.children && (
@@ -287,10 +287,10 @@ const Layout = ({ children }: LayoutProps) => {
                                     <Link
                                       key={child.name}
                                       to={child.href || '#'}
-                                      className={`group flex items-center px-3 py-2 text-xs font-normal rounded-md leading-normal ${
+                                      className={`group flex items-center px-3 py-2 text-xs rounded-md leading-normal ${
                                         childActive
-                                          ? 'bg-gray-100 text-gray-900'
-                                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                                          ? 'bg-gray-100 text-gray-900 font-bold'
+                                          : 'text-gray-600 font-normal hover:bg-gray-50 hover:text-gray-900'
                                       }`}
                                     >
                                       <ChildIcon className="mr-3 h-4 w-4 text-gray-600" />
@@ -308,10 +308,10 @@ const Layout = ({ children }: LayoutProps) => {
                         <Link
                           key={item.name}
                           to={item.href || '#'}
-                          className={`group flex items-center w-full px-3 py-2 text-xs font-medium rounded-md leading-normal ${
+                          className={`group flex items-center w-full px-3 py-2 text-xs rounded-md leading-normal ${
                             isActive(item.href)
-                              ? 'bg-gray-100 text-gray-900'
-                              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                              ? 'bg-gray-100 text-gray-900 font-bold'
+                              : 'text-gray-600 font-normal hover:bg-gray-50 hover:text-gray-900'
                           }`}
                         >
                           <Icon className="h-5 w-5 mr-3 text-gray-600" />
@@ -323,7 +323,7 @@ const Layout = ({ children }: LayoutProps) => {
 
                   {/* Clients Section */}
                   <div className="px-4 pt-2 pb-2">
-                    <h2 className="text-[10px] font-normal text-gray-400 uppercase tracking-wider leading-tight">Clients</h2>
+                    <h2 className="text-[10px] font-normal text-gray-500 uppercase tracking-wider leading-tight">Clients</h2>
                   </div>
                   <div className="px-2 pb-3">
                     {navigation.filter(item => item.section === 'Clients').map((item) => {
@@ -333,10 +333,10 @@ const Layout = ({ children }: LayoutProps) => {
                         <Link
                           key={item.name}
                           to={item.href || '#'}
-                          className={`group flex items-center w-full px-3 py-2 text-xs font-medium rounded-md leading-normal ${
+                          className={`group flex items-center w-full px-3 py-2 text-xs rounded-md leading-normal ${
                             itemActive
-                              ? 'bg-gray-100 text-gray-900'
-                              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                              ? 'bg-gray-100 text-gray-900 font-bold'
+                              : 'text-gray-600 font-normal hover:bg-gray-50 hover:text-gray-900'
                           }`}
                         >
                           <Icon className="h-5 w-5 mr-3 text-gray-600" />
@@ -363,8 +363,8 @@ const Layout = ({ children }: LayoutProps) => {
                           onClick={() => toggleExpanded(item.name)}
                           className={`flex items-center justify-center p-2 rounded-md ${
                             itemActive
-                              ? 'bg-gray-100 text-gray-900'
-                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                              ? 'bg-gray-100 text-gray-900 font-bold'
+                              : 'text-gray-600 font-normal hover:bg-gray-50 hover:text-gray-900'
                           }`}
                           title={item.name}
                         >
@@ -379,8 +379,8 @@ const Layout = ({ children }: LayoutProps) => {
                         to={item.href || '#'}
                         className={`flex items-center justify-center p-2 rounded-md ${
                           itemActive
-                            ? 'bg-gray-100 text-gray-900'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'bg-gray-100 text-gray-900 font-bold'
+                            : 'text-gray-600 font-normal hover:bg-gray-50 hover:text-gray-900'
                         }`}
                         title={item.name}
                       >
@@ -424,7 +424,7 @@ const Layout = ({ children }: LayoutProps) => {
                 {/* Logout */}
                 <button
                   onClick={handleLogout}
-                  className="group flex items-center w-full px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 leading-normal"
+                  className="group flex items-center w-full px-3 py-2 text-xs font-normal text-gray-600 hover:bg-gray-50 hover:text-gray-900 leading-normal"
                 >
                   <LogOut className="h-5 w-5 mr-3 text-gray-600" />
                   <span>Logout</span>
@@ -467,28 +467,26 @@ const Layout = ({ children }: LayoutProps) => {
       {/* Main content */}
       <div className={`w-full transition-all duration-300 ${isMobile ? '' : isSidebarCollapsed ? 'pl-16' : 'pl-64'}`}>
         {/* Top bar */}
-        <div className={`sticky top-0 z-40 flex h-16 shrink-0 items-center border-b border-gray-200 bg-white shadow-sm ${
-          isMobile ? 'px-4' : 'px-4 sm:px-6 lg:px-8'
+        <div className={`sticky top-0 z-40 flex shrink-0 items-center border-b border-gray-200 bg-white shadow-sm ${
+          isMobile ? 'pl-2 pr-4 py-1' : 'pl-2 pr-4 sm:pr-6 py-1'
         }`}>
-          <div className="flex flex-1 items-center min-w-0">
-            <div className="flex items-center min-w-0">
-              <nav className="flex items-center text-sm" aria-label="Breadcrumb">
-                {(() => {
-                  const parts = getBreadcrumbParts()
-                  return (
-                    <>
-                      {parts.parent && (
-                        <>
-                          <span className="text-gray-500">{parts.parent}</span>
-                          <ChevronRight className="mx-2 h-4 w-4 text-gray-400" />
-                        </>
-                      )}
-                      <span className="text-gray-900 font-medium">{parts.active}</span>
-                    </>
-                  )
-                })()}
-              </nav>
-            </div>
+          <div className="flex flex-1 items-center min-w-0 h-10">
+            <nav className="flex items-center text-sm" aria-label="Breadcrumb">
+              {(() => {
+                const parts = getBreadcrumbParts()
+                return (
+                  <>
+                    {parts.parent && (
+                      <>
+                        <span className="text-gray-500">{parts.parent}</span>
+                        <ChevronRight className="mx-2 h-4 w-4 text-gray-400" />
+                      </>
+                    )}
+                    <span className="text-gray-900 font-medium">{parts.active}</span>
+                  </>
+                )
+              })()}
+            </nav>
           </div>
         </div>
 
