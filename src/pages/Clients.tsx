@@ -485,24 +485,18 @@ const Clients = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Total Clients</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredClients.length}</p>
-            </div>
-          </div>
-          <Button
-            onClick={handleAddClient}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-          >
-            <User className="h-4 w-4" />
-            Add Client
-          </Button>
+        <div className="flex items-center gap-2 text-gray-600">
+          <Users className="h-4 w-4" />
+          <span className="text-xs font-normal">Total Clients:</span>
+          <span className="text-sm font-medium text-gray-900">{filteredClients.length}</span>
         </div>
+        <Button
+          onClick={handleAddClient}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+        >
+          <User className="h-4 w-4" />
+          Add Client
+        </Button>
       </div>
 
       {/* Search Bar */}
@@ -749,20 +743,17 @@ const Clients = () => {
       {/* Add Client Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] mx-auto">
-          <DialogHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <User className="h-6 w-6 text-green-600" />
-            </div>
-            <DialogTitle className="text-lg font-semibold text-gray-900">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-gray-900">
               Add New Client
             </DialogTitle>
-            <DialogDescription className="text-sm text-gray-500 mt-2">
+            <DialogDescription className="text-xs text-gray-500 mt-1">
               Enter the client details below.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 mt-6">
+          <div className="space-y-3 mt-4">
             <div>
-              <Label htmlFor="addName" className="text-sm font-medium">Name *</Label>
+              <Label htmlFor="addName" className="text-xs font-medium text-gray-900">Name *</Label>
               <Input
                 id="addName"
                 value={addData.name}
@@ -772,7 +763,7 @@ const Clients = () => {
               />
             </div>
             <div>
-              <Label htmlFor="addEmail" className="text-sm font-medium">Email *</Label>
+              <Label htmlFor="addEmail" className="text-xs font-medium text-gray-900">Email *</Label>
               <Input
                 id="addEmail"
                 type="email"
@@ -793,7 +784,7 @@ const Clients = () => {
               )}
             </div>
             <div>
-              <Label htmlFor="addPhone" className="text-sm font-medium">Phone</Label>
+              <Label htmlFor="addPhone" className="text-xs font-medium text-gray-900">Phone</Label>
               <div className="mt-1 flex gap-2">
                 <Select
                   value={addData.countryCode}
@@ -836,7 +827,7 @@ const Clients = () => {
               )}
             </div>
             <div>
-              <Label htmlFor="addType" className="text-sm font-medium">Type</Label>
+              <Label htmlFor="addType" className="text-xs font-medium text-gray-900">Type</Label>
               <Select
                 value={addData.type}
                 onValueChange={(value) => setAddData(prev => ({ ...prev, type: value as 'individual' | 'corporate' }))}
@@ -851,19 +842,19 @@ const Clients = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
             <Button
               variant="outline"
               onClick={() => setShowAddDialog(false)}
               disabled={isAdding}
-              className="flex-1"
+              className="flex-1 text-xs font-normal"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmAddClient}
               disabled={isAdding || !addData.name || !addData.email}
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-xs font-normal"
             >
               {isAdding ? 'Adding...' : 'Add Client'}
             </Button>
@@ -874,20 +865,17 @@ const Clients = () => {
       {/* Edit Client Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] mx-auto">
-          <DialogHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <Pencil className="h-6 w-6 text-blue-600" />
-            </div>
-            <DialogTitle className="text-lg font-semibold text-gray-900">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-gray-900">
               Edit Client
             </DialogTitle>
-            <DialogDescription className="text-sm text-gray-500 mt-2">
+            <DialogDescription className="text-xs text-gray-500 mt-1">
               Update the client details below.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 mt-6">
+          <div className="space-y-3 mt-4">
             <div>
-              <Label htmlFor="editName" className="text-sm font-medium">Name *</Label>
+              <Label htmlFor="editName" className="text-xs font-medium text-gray-900">Name *</Label>
               <Input
                 id="editName"
                 value={editData.name}
@@ -898,19 +886,19 @@ const Clients = () => {
             </div>
             {editingClient?.email && (
               <div>
-                <Label htmlFor="editEmail" className="text-sm font-medium">Email</Label>
+                <Label htmlFor="editEmail" className="text-xs font-medium text-gray-900">Email</Label>
                 <Input
                   id="editEmail"
                   type="email"
                   value={editingClient.email}
                   disabled
-                  className="mt-1 bg-gray-50"
+                  className="mt-1 bg-gray-50 text-xs"
                 />
                 <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
               </div>
             )}
             <div>
-              <Label htmlFor="editPhone" className="text-sm font-medium">Phone</Label>
+              <Label htmlFor="editPhone" className="text-xs font-medium text-gray-900">Phone</Label>
               <div className="mt-1 flex gap-2">
                 <Select
                   value={editData.countryCode}
@@ -953,7 +941,7 @@ const Clients = () => {
               )}
             </div>
             <div>
-              <Label htmlFor="editType" className="text-sm font-medium">Type</Label>
+              <Label htmlFor="editType" className="text-xs font-medium text-gray-900">Type</Label>
               <Select
                 value={editData.type}
                 onValueChange={(value) => setEditData(prev => ({ ...prev, type: value as 'individual' | 'corporate' }))}
@@ -968,7 +956,7 @@ const Clients = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
             <Button
               variant="outline"
               onClick={() => {
@@ -976,14 +964,14 @@ const Clients = () => {
                 setEditingClient(null)
               }}
               disabled={isUpdating}
-              className="flex-1"
+              className="flex-1 text-xs font-normal"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmEditClient}
               disabled={isUpdating || !editData.name}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-xs font-normal"
             >
               {isUpdating ? 'Updating...' : 'Update Client'}
             </Button>
