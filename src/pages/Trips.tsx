@@ -3,11 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Search, Upload, Plane, Calendar, MapPin, User, ChevronLeft, ChevronRight, ArrowRight, Filter, X, MoreVertical, ChevronUp, ChevronDown } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Search, Upload, Plane, Calendar, MapPin, User, ChevronLeft, ChevronRight, ArrowRight, MoreVertical, ChevronUp, ChevronDown } from 'lucide-react'
 import { getTickets, Ticket } from '@/api/tickets.service'
 import { ApiError } from '@/api/types'
 import UploadTicketModal from '@/components/UploadTicketModal'
@@ -95,9 +93,6 @@ const Trips = () => {
 
   // Upload modal state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
-  
-  // Filter popover state
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   // Validate sector format
   const validateSector = (value: string): boolean => {
@@ -249,98 +244,54 @@ const Trips = () => {
             Past
           </Button>
         </div>
-        <div className="flex gap-2">
-          {/* Filter Popover */}
-          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Filter
-                {(pnr || clientEmail || sector) && (
-                  <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                    {(pnr ? 1 : 0) + (clientEmail ? 1 : 0) + (sector ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-4" align="end">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">Filters</h3>
-                  <button
-                    onClick={() => setIsFilterOpen(false)}
-                    className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-                  >
-                    <X className="h-4 w-4 text-gray-500" />
-                  </button>
-                </div>
-                
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="filter-pnr" className="text-sm font-medium text-gray-900">PNR</Label>
-                    <Input
-                      id="filter-pnr"
-                      value={pnr}
-                      onChange={(e) => setPnr(e.target.value)}
-                      placeholder="Enter PNR"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="filter-clientEmail" className="text-sm font-medium text-gray-900">Client Email</Label>
-                    <Input
-                      id="filter-clientEmail"
-                      type="email"
-                      value={clientEmail}
-                      onChange={(e) => setClientEmail(e.target.value)}
-                      placeholder="Enter client email"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="filter-sector" className="text-sm font-medium text-gray-900">Sector (e.g., DEL-BOM)</Label>
-                    <Input
-                      id="filter-sector"
-                      value={sector}
-                      onChange={(e) => handleSectorChange(e.target.value)}
-                      placeholder="DEL-BOM"
-                      className="mt-1"
-                      maxLength={7}
-                    />
-                    {sectorError && (
-                      <p className="text-sm text-red-600 mt-1">{sectorError}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPnr('')
-                      setClientEmail('')
-                      setSector('')
-                      setSectorError(null)
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    Clear
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setIsFilterOpen(false)}
-                    className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white"
-                  >
-                    Apply
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+        <div className="flex gap-2 items-center">
+          {/* Inline Search Bars */}
+          <div className="flex gap-2 items-center flex-1">
+            <div className="flex-1">
+              <Input
+                id="filter-pnr"
+                value={pnr}
+                onChange={(e) => setPnr(e.target.value)}
+                placeholder="Enter PNR"
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <Input
+                id="filter-clientEmail"
+                type="email"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+                placeholder="Enter client email"
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <Input
+                id="filter-sector"
+                value={sector}
+                onChange={(e) => handleSectorChange(e.target.value)}
+                placeholder="Sector (e.g., DEL-BOM)"
+                className="w-full"
+                maxLength={7}
+              />
+            </div>
+          </div>
+          {(pnr || clientEmail || sector) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPnr('')
+                setClientEmail('')
+                setSector('')
+                setSectorError(null)
+              }}
+              className="flex items-center gap-2 whitespace-nowrap"
+            >
+              Clear
+            </Button>
+          )}
 
           <Button
             onClick={() => setIsUploadModalOpen(true)}
