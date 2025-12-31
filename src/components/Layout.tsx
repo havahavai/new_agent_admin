@@ -181,11 +181,11 @@ const Layout = ({ children }: LayoutProps) => {
           <nav className="flex justify-around py-2 px-2">
             {navigation.map((item) => {
               const Icon = item.icon
-              const isActive = location.pathname === item.href
+              const isActive = item.href ? location.pathname === item.href : false
               return (
                 <Link
                   key={item.name}
-                  to={item.href}
+                  to={item.href || '#'}
                   onClick={() => console.log(`Navigating to: ${item.href}`)}
                   className={`flex flex-col items-center py-2 px-2 rounded-lg transition-colors min-w-0 flex-1 ${
                     isActive
