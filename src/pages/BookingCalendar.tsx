@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { getTickets, Ticket } from '@/api/tickets.service'
 import { ApiError } from '@/api/types'
-import { Plane, ChevronLeft, ChevronRight, Calendar, MoreVertical, ChevronUp, ChevronDown } from 'lucide-react'
+import { Plane, ChevronLeft, ChevronRight, Calendar, ChevronUp, ChevronDown } from 'lucide-react'
 
 // Helper function to format date for table (MM/DD/YYYY)
 const formatDateForTable = (dateString: string): string => {
@@ -460,7 +460,6 @@ const BookingCalendar = () => {
                     </div>
                   </TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -491,11 +490,6 @@ const BookingCalendar = () => {
                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                           {status}
                         </Badge>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <button className="p-1 hover:bg-gray-100 rounded">
-                          <MoreVertical className="h-4 w-4 text-gray-500" />
-                        </button>
                       </TableCell>
                     </TableRow>
                   )

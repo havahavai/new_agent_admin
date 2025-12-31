@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Search, Upload, Plane, Calendar, MapPin, User, ChevronLeft, ChevronRight, ArrowRight, MoreVertical, ChevronUp, ChevronDown } from 'lucide-react'
+import { Search, Upload, Plane, Calendar, MapPin, User, ChevronLeft, ChevronRight, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react'
 import { getTickets, Ticket } from '@/api/tickets.service'
 import { ApiError } from '@/api/types'
 import UploadTicketModal from '@/components/UploadTicketModal'
@@ -353,7 +353,6 @@ const Trips = () => {
                   </div>
                 </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -384,11 +383,6 @@ const Trips = () => {
                       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                         {status}
                       </Badge>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <MoreVertical className="h-4 w-4 text-gray-500" />
-                      </button>
                     </TableCell>
                   </TableRow>
                 )

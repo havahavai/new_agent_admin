@@ -19,4 +19,5 @@ export * from "./addFlightManually";
 export * from "./uploadTicket";
 export * from "./manualFlight";
 export * from "./ticketUpload";
+export * from "./getTripDetails";
 export * from "./utils";

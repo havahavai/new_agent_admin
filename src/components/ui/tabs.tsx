@@ -15,7 +15,8 @@ const Tabs = React.forwardRef<
   >
     {React.Children.map(children, (child) => {
       if (React.isValidElement(child)) {
-        return React.cloneElement(child, { value, onValueChange } as any)
+        // Pass both value and currentValue - TabsContent uses currentValue, TabsTrigger uses value
+        return React.cloneElement(child, { value, currentValue: value, onValueChange } as any)
       }
       return child
     })}
@@ -27,9 +28,10 @@ const TabsList = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
     value?: string
+    currentValue?: string
     onValueChange?: (value: string) => void
   }
->(({ className, value, onValueChange, children, ...props }, ref) => (
+>(({ className, value, currentValue, onValueChange, children, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
@@ -40,7 +42,9 @@ const TabsList = React.forwardRef<
   >
     {React.Children.map(children, (child) => {
       if (React.isValidElement(child)) {
-        return React.cloneElement(child, { value, onValueChange } as any)
+        // Pass currentValue to TabsTrigger so it knows which tab is active
+        const activeValue = currentValue ?? value;
+        return React.cloneElement(child, { value, currentValue: activeValue, onValueChange } as any)
       }
       return child
     })}
@@ -79,19 +83,25 @@ const TabsContent = React.forwardRef<
     value: string
     currentValue?: string
   }
->(({ className, value, currentValue, children, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      currentValue === value ? "block" : "hidden",
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </div>
-))
+>(({ className, value, currentValue, children, ...props }, ref) => {
+  // 'value' is this tab's identifier (e.g., "booking")
+  // 'currentValue' is the currently active tab (passed from Tabs component)
+  const isActive = currentValue === value;
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isActive ? "block" : "hidden",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+})
 TabsContent.displayName = "TabsContent"
 
 export { Tabs, TabsList, TabsTrigger, TabsContent }

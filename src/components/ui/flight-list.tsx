@@ -44,13 +44,9 @@ export const FlightList: React.FC<FlightListProps> = ({
   const navigate = useNavigate()
 
   const handleFlightClick = (flight: Flight) => {
-    if (flight.ticketId) {
-      // Navigate with both flightId and ticketId for API data
-      navigate(`/trips/${flight.id}/${flight.ticketId}`)
-    } else {
-      // Fallback to old route for mock data
-      navigate(`/trips/${flight.id}`)
-    }
+    // Use ticketId if available, otherwise fallback to flight.id
+    const ticketId = flight.ticketId || flight.id;
+    navigate(`/trips/${ticketId}`)
   }
 
 

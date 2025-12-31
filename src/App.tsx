@@ -54,14 +54,7 @@ function App() {
             </Layout>
           </AuthGuard>
         } />
-        <Route path="/trips/:flightId" element={
-          <AuthGuard>
-            <Layout>
-              <TripDetails />
-            </Layout>
-          </AuthGuard>
-        } />
-        <Route path="/trips/:flightId/:ticketId" element={
+        <Route path="/trips/:ticketId" element={
           <AuthGuard>
             <Layout>
               <TripDetails />
