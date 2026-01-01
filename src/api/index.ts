@@ -22,3 +22,4 @@ export * from "./ticketUpload";
 export * from "./getTripDetails";
 export * from "./utils";
 export * from "./emailBoxes";
+export * from "./updateTraveller";

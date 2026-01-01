@@ -2,16 +2,20 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plane, Users, FileText, Download, Phone, Mail, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plane, Users, FileText, Download, Phone, Mail, User, Edit } from "lucide-react";
 import { getTripDetails, type TripDetailsData } from "@/api/getTripDetails";
 import type { ApiError } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
+import { EditTravellerDialog } from "@/components/EditTravellerDialog";
 
 const TripDetails = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
   const [tripDetails, setTripDetails] = useState<TripDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingTraveller, setEditingTraveller] = useState<TripDetailsData["travellers"][0] | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   // const [activeTab, setActiveTab] = useState<"ticket" | "documents" | "travellers">("ticket");
 
   useEffect(() => {
@@ -416,13 +420,33 @@ const TripDetails = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {tripDetails.travellers.map((traveller, index) => (
+                  {[...tripDetails.travellers]
+                    .sort((a, b) => {
+                      const nameA = `${a.firstname} ${a.lastname}`.toLowerCase();
+                      const nameB = `${b.firstname} ${b.lastname}`.toLowerCase();
+                      return nameA.localeCompare(nameB);
+                    })
+                    .map((traveller, index) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <User className="h-5 w-5 text-gray-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {traveller.firstname} {traveller.lastname}
-                        </h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <User className="h-5 w-5 text-gray-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {traveller.firstname} {traveller.lastname}
+                          </h3>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingTraveller(traveller);
+                            setIsEditDialogOpen(true);
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </Button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {traveller.dateOfBirth && (
@@ -511,6 +535,40 @@ const TripDetails = () => {
       </div>
       {/* End of commented tabs */}
       {/* </Tabs> */}
+
+      {/* Edit Traveller Dialog */}
+      <EditTravellerDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingTraveller(null);
+        }}
+        onSuccess={() => {
+          // Refetch trip details after successful update
+          if (ticketId) {
+            const fetchTripDetails = async () => {
+              try {
+                setLoading(true);
+                setError(null);
+                const response = await getTripDetails(ticketId);
+                if ("success" in response && response.success) {
+                  setTripDetails(response.data);
+                } else {
+                  const errorResponse = response as ApiError;
+                  setError(errorResponse.message || "Failed to load trip details");
+                }
+              } catch (err) {
+                console.error("Error fetching trip details:", err);
+                setError("Failed to load trip details");
+              } finally {
+                setLoading(false);
+              }
+            };
+            fetchTripDetails();
+          }
+        }}
+        traveller={editingTraveller}
+      />
     </div>
   );
 };
