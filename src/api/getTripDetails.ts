@@ -3,8 +3,13 @@ import { ApiError, getJwtToken } from "./types";
 
 // Trip Details Response Types
 export interface TripDetailsData {
-  bookingId: number;
+  id: number;
+  bookingId: string | null;
   pnr: string;
+  bookingReference: string | null;
+  bookingStatus: string;
+  bookingDate: string;
+  isRefundable: boolean | null;
   departure: {
     iata: string;
     city: string;
@@ -48,9 +53,17 @@ export interface TripDetailsData {
     lastname: string;
     countryCode: string | null;
     phone: string | null;
-    dateOfBirth: string | null;
-    passport: string | null;
+    dateOfBirth: string;
+    passport: string;
     nationality: string | null;
+    gender: string;
+    seat: string;
+    meal: string;
+    baggage: {
+      cabin: string | null;
+      checkin: string | null;
+      additional: string | null;
+    };
   }>;
   clients: Array<{
     clientId: number;
@@ -58,7 +71,9 @@ export interface TripDetailsData {
     email: string;
     type: string;
     phone: string;
-    countryCode: string;
+    countryCode: string | null;
+    companyName: string | null;
+    lastBookingDate: string | null;
   }>;
 }
 

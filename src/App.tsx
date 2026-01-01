@@ -15,6 +15,8 @@ import SimpleSeatSelection from './pages/SimpleSeatSelection'
 import SimplifiedSeatSelection from './pages/SimplifiedSeatSelection'
 import Login from './pages/Login'
 import EmailBoxes from './pages/EmailBoxes'
+import OAuthCallback from './pages/OAuthCallback'
+import OAuthCallbackWrapper from './pages/OAuthCallbackWrapper'
 
 function App() {
   return (
@@ -23,7 +25,8 @@ function App() {
       <Routes>
         {/* Public routes - no authentication required */}
         <Route path="/login" element={<Login />} />
-        <Route path="/oauth2callback" element={<Login />} />
+        <Route path="/oauth2callback" element={<OAuthCallbackWrapper />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         {/* Protected routes - authentication required */}
         <Route path="/" element={

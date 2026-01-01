@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane, Users, FileText, Download, Phone, Mail, User } from "lucide-react";
 import { getTripDetails, type TripDetailsData } from "@/api/getTripDetails";
 import type { ApiError } from "@/api/types";
+import { Badge } from "@/components/ui/badge";
 
 const TripDetails = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -61,6 +62,18 @@ const TripDetails = () => {
   }, [ticketId]);
 
   const formatDate = (dateString: string): string => {
+    // Extract date components directly from ISO string without timezone conversion
+    const clean = dateString.replace(/Z$/, '');
+    const dateMatch = clean.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    
+    if (dateMatch) {
+      const [, year, month, day] = dateMatch;
+      const monthNum = parseInt(month, 10) - 1; // JavaScript months are 0-indexed
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${monthNames[monthNum]} ${parseInt(day, 10)}, ${year}`;
+    }
+    
+    // Fallback to Date parsing if format doesn't match
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
@@ -70,6 +83,26 @@ const TripDetails = () => {
   };
 
   const formatTime = (dateString: string): string => {
+    // Extract time components directly from ISO string without timezone conversion
+    // Format: "2026-01-20T10:30:00.000Z" -> extract "10:30:00"
+    const clean = dateString.replace(/Z$/, '');
+    const timeMatch = clean.match(/T(\d{2}):(\d{2}):(\d{2})/);
+    
+    if (timeMatch) {
+      const [, hour, minute] = timeMatch;
+      const hourNum = parseInt(hour, 10);
+      const minuteNum = parseInt(minute, 10);
+      
+      // Convert to 12-hour format
+      let hour12 = hourNum % 12;
+      if (hour12 === 0) hour12 = 12;
+      const ampm = hourNum >= 12 ? 'PM' : 'AM';
+      const minuteStr = minuteNum.toString().padStart(2, '0');
+      
+      return `${hour12}:${minuteStr} ${ampm}`;
+    }
+    
+    // Fallback to Date parsing if format doesn't match
     const date = new Date(dateString);
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -126,7 +159,7 @@ const TripDetails = () => {
         {/* Ticket Section - PNR, Source, Flight Details, Client Details */}
         <div className="mt-1">
           <div className="space-y-6">
-            {/* PNR and Source */}
+            {/* Booking Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Booking Information</CardTitle>
@@ -137,6 +170,46 @@ const TripDetails = () => {
                     <label className="text-sm font-medium text-gray-700">PNR</label>
                     <p className="mt-1 text-sm text-gray-900">{tripDetails.pnr}</p>
                   </div>
+                  {tripDetails.bookingId && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Booking ID</label>
+                      <p className="mt-1 text-sm text-gray-900">{tripDetails.bookingId}</p>
+                    </div>
+                  )}
+                  {tripDetails.bookingReference && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Booking Reference</label>
+                      <p className="mt-1 text-sm text-gray-900">{tripDetails.bookingReference}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Booking Status</label>
+                    <p className="mt-1 text-sm text-gray-900 capitalize">
+                      {tripDetails.bookingStatus.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  {tripDetails.bookingDate && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Booking Date</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {formatDate(tripDetails.bookingDate)}
+                      </p>
+                    </div>
+                  )}
+                  {tripDetails.isRefundable !== null && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Refund Status</label>
+                      <div className="mt-1">
+                        <Badge className={
+                          tripDetails.isRefundable 
+                            ? 'bg-green-100 text-green-800 hover:bg-green-100' 
+                            : 'bg-red-100 text-red-800 hover:bg-red-100'
+                        }>
+                          {tripDetails.isRefundable ? 'Refundable' : 'Non-Refundable'}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm font-medium text-gray-700">Source</label>
                     <p className="mt-1 text-sm text-gray-900">
@@ -211,6 +284,12 @@ const TripDetails = () => {
                           <label className="text-sm font-medium text-gray-700">Type</label>
                           <p className="mt-1 text-sm text-gray-900 capitalize">{client.type}</p>
                         </div>
+                        {client.companyName && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Company Name</label>
+                            <p className="mt-1 text-sm text-gray-900">{client.companyName}</p>
+                          </div>
+                        )}
                         <div>
                           <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
                             <Mail className="h-4 w-4" />
@@ -226,6 +305,14 @@ const TripDetails = () => {
                             </label>
                             <p className="mt-1 text-sm text-gray-900">
                               {client.countryCode ? `${client.countryCode}${client.phone}` : client.phone}
+                            </p>
+                          </div>
+                        )}
+                        {client.lastBookingDate && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Last Booking Date</label>
+                            <p className="mt-1 text-sm text-gray-900">
+                              {formatDate(client.lastBookingDate)}
                             </p>
                           </div>
                         )}
@@ -341,7 +428,17 @@ const TripDetails = () => {
                         {traveller.dateOfBirth && (
                           <div>
                             <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                            <p className="mt-1 text-sm text-gray-900">{formatDate(traveller.dateOfBirth)}</p>
+                            <p className="mt-1 text-sm text-gray-900">
+                              {traveller.dateOfBirth.includes('T') 
+                                ? formatDate(traveller.dateOfBirth)
+                                : traveller.dateOfBirth}
+                            </p>
+                          </div>
+                        )}
+                        {traveller.gender && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Gender</label>
+                            <p className="mt-1 text-sm text-gray-900 capitalize">{traveller.gender}</p>
                           </div>
                         )}
                         {traveller.nationality && (
@@ -367,6 +464,40 @@ const TripDetails = () => {
                                 ? `${traveller.countryCode}${traveller.phone}`
                                 : traveller.phone}
                             </p>
+                          </div>
+                        )}
+                        {traveller.seat && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Seat</label>
+                            <p className="mt-1 text-sm text-gray-900">{traveller.seat}</p>
+                          </div>
+                        )}
+                        {traveller.meal && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Meal Preference</label>
+                            <p className="mt-1 text-sm text-gray-900 capitalize">{traveller.meal}</p>
+                          </div>
+                        )}
+                        {traveller.baggage && (
+                          <div className="md:col-span-2">
+                            <label className="text-sm font-medium text-gray-700">Baggage</label>
+                            <div className="mt-1 space-y-1">
+                              {traveller.baggage.cabin && (
+                                <p className="text-sm text-gray-900">
+                                  <span className="font-medium">Cabin:</span> {traveller.baggage.cabin}
+                                </p>
+                              )}
+                              {traveller.baggage.checkin && (
+                                <p className="text-sm text-gray-900">
+                                  <span className="font-medium">Check-in:</span> {traveller.baggage.checkin}
+                                </p>
+                              )}
+                              {traveller.baggage.additional && (
+                                <p className="text-sm text-gray-900">
+                                  <span className="font-medium">Additional:</span> {traveller.baggage.additional}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

@@ -11,7 +11,8 @@ import {
   ChevronsUpDown,
   ChevronDown,
   ChevronRight,
-  Ticket
+  Ticket,
+  Plus
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { logout, BusinessFlyoLoginResponse } from '../api/auth'
@@ -23,6 +24,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from './ui/dialog'
+import { AddEmailBoxDialog } from './AddEmailBoxDialog'
 
 interface LayoutProps {
   children: ReactNode
@@ -518,8 +520,9 @@ const Layout = ({ children }: LayoutProps) => {
 const EmailBoxesContent = () => {
   const [emailBoxes, setEmailBoxes] = useState<Array<{ email: string; provider: string }>>([])
   const [loading, setLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  useEffect(() => {
+  const refreshEmailBoxes = () => {
     const userDataStr = localStorage.getItem('user')
     if (userDataStr) {
       try {
@@ -531,7 +534,25 @@ const EmailBoxesContent = () => {
         console.error('Error parsing user data:', error)
       }
     }
+  }
+
+  useEffect(() => {
+    refreshEmailBoxes()
     setLoading(false)
+  }, [])
+
+  // Listen for storage changes to refresh email boxes when updated
+  useEffect(() => {
+    const handleStorageChange = () => {
+      refreshEmailBoxes()
+    }
+    window.addEventListener('storage', handleStorageChange)
+    // Also check periodically in case of same-tab updates
+    const interval = setInterval(refreshEmailBoxes, 1000)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      clearInterval(interval)
+    }
   }, [])
 
   const getInitials = (email: string): string => {
@@ -626,6 +647,25 @@ const EmailBoxesContent = () => {
           ))}
         </div>
       )}
+      
+      {/* Add New Email Box Button at the bottom */}
+      <button
+        onClick={() => setIsDialogOpen(true)}
+        className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors text-gray-700 font-medium"
+      >
+        <Plus className="w-4 h-4" />
+        Add New Email Box
+      </button>
+
+      {/* Add Email Box Dialog */}
+      <AddEmailBoxDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSuccess={() => {
+          setIsDialogOpen(false)
+          refreshEmailBoxes()
+        }}
+      />
     </div>
   )
 }
