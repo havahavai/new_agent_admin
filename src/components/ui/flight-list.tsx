@@ -66,24 +66,58 @@ export const FlightList: React.FC<FlightListProps> = ({
   }
 
   const renderCheckinMeta = (flight: Flight) => {
+    const rawStatus = flight.checkInStatus || ''
+    let displayStatus = rawStatus
+
+    switch (rawStatus) {
+      case 'CheckInCompletedByUser':
+      case 'CheckInCompletedByAgent':
+      case 'CheckInCompletedByAdmin':
+        displayStatus = 'COMPLETED'
+        break
+      case 'FailedByAgent':
+        displayStatus = 'IN_PROGRESS'
+        break
+      case 'FailedByAdmin':
+        displayStatus = 'CHECKIN FAILED'
+        break
+      default:
+        displayStatus = rawStatus
+        break
+    }
+
+    const statusColorClass =
+      displayStatus === 'COMPLETED'
+        ? 'bg-green-100 text-green-800 border-green-100'
+        : displayStatus === 'CHECKIN FAILED'
+          ? 'bg-red-100 text-red-800 border-red-100'
+          : displayStatus === 'IN_PROGRESS'
+            ? 'bg-yellow-100 text-yellow-800 border-yellow-100'
+            : 'bg-gray-100 text-gray-800 border-gray-100'
+
     return (
       <div className="flex flex-col gap-1 text-[11px] text-gray-600">
         {flight.checkInStatus && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wide text-gray-400">Status</span>
-            <span className="font-medium text-gray-800">{flight.checkInStatus}</span>
-          </div>
+          <span
+            className={cn(
+              'inline-flex w-fit items-center rounded-full border px-10 py-1 text-[12px] font-semibold uppercase tracking-wide',
+              statusColorClass
+            )}
+          >
+            {displayStatus}
+          </span>
         )}
-        {flight.checkInSubStatus && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wide text-gray-400">Sub</span>
-            <span className="font-medium text-gray-800">{flight.checkInSubStatus}</span>
-          </div>
-        )}
-        {flight.statusMessage && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wide text-gray-400">Message</span>
-            <span className="font-medium text-gray-800">{flight.statusMessage}</span>
+        {(flight.checkInSubStatus || flight.statusMessage) && (
+          <div className="text-[11px] text-gray-600 text-center">
+            {flight.checkInSubStatus && (
+              <span className="font-medium text-gray-800">{flight.checkInSubStatus}</span>
+            )}
+            {flight.checkInSubStatus && flight.statusMessage && (
+              <span className="text-gray-400">: </span>
+            )}
+            {flight.statusMessage && (
+              <span className="text-gray-600">{flight.statusMessage}</span>
+            )}
           </div>
         )}
       </div>
