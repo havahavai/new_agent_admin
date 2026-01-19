@@ -306,6 +306,7 @@ const TripsWorking = () => {
         arrival: extractTimeFromISO(flight.arrivalTime),
         checkInStatus: flight.checkInStatus,
         checkInSubStatus: flight.checkInSubStatus,
+        statusMessage: flight.statusMessage,
         passengers: parseInt(flight.numberOfPassengers),
         aircraft: flight.airline,
         webCheckinStatus: flight.checkInStatus === 'NONE' ? 'Scheduled' :
