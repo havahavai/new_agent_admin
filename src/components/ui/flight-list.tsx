@@ -96,27 +96,26 @@ export const FlightList: React.FC<FlightListProps> = ({
             : 'bg-gray-100 text-gray-800 border-gray-100'
 
     return (
-      <div className="flex flex-col gap-1 text-[11px] text-gray-600">
+      <div className="flex flex-col items-center gap-1 text-[11px] text-gray-600 text-center">
         {flight.checkInStatus && (
           <span
             className={cn(
-              'inline-flex w-fit items-center rounded-full border px-10 py-1 text-[12px] font-semibold uppercase tracking-wide',
+              'inline-flex w-[180px] items-center justify-center rounded-full border px-4 py-1 text-[12px] font-semibold uppercase tracking-wide truncate',
               statusColorClass
             )}
           >
             {displayStatus}
           </span>
         )}
-        {(flight.checkInSubStatus || flight.statusMessage) && (
-          <div className="text-[11px] text-gray-600 text-center">
-            {flight.checkInSubStatus && (
-              <span className="font-medium text-gray-800">{flight.checkInSubStatus}</span>
-            )}
-            {flight.checkInSubStatus && flight.statusMessage && (
-              <span className="text-gray-400">: </span>
+        {(flight.checkInSubStatus === 'MISSING_INFO' || flight.statusMessage) && (
+          <div className="flex flex-col items-center gap-1 text-center">
+            {flight.checkInSubStatus === 'MISSING_INFO' && (
+              <span className="inline-flex w-fit items-center rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                Attention needed
+              </span>
             )}
             {flight.statusMessage && (
-              <span className="text-gray-600">{flight.statusMessage}</span>
+              <span className="text-[11px] text-gray-500">{flight.statusMessage}</span>
             )}
           </div>
         )}
