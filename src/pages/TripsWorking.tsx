@@ -18,19 +18,17 @@ const extractTimeFromISO = (isoString: string): string => {
   return isoString // fallback to original if parsing fails
 }
 
-// Helper function to get UTC date string from ISO string
-const getUTCDateString = (isoString: string): string => {
-  const date = new Date(isoString)
-  return date.getUTCFullYear() + '-' +
-         String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
-         String(date.getUTCDate()).padStart(2, '0')
+// Helper function to parse a YYYY-MM-DD string into a local Date (no TZ shift)
+const parseDateStringToLocal = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, (month || 1) - 1, day || 1)
 }
 
 // Helper function to get date string from Date object (YYYY-MM-DD format)
 const getDateString = (date: Date): string => {
-  return date.getUTCFullYear() + '-' +
-         String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
-         String(date.getUTCDate()).padStart(2, '0')
+  return date.getFullYear() + '-' +
+    String(date.getMonth() + 1).padStart(2, '0') + '-' +
+    String(date.getDate()).padStart(2, '0')
 }
 
 // Helper function to generate carousel data from sortedData
@@ -40,8 +38,33 @@ const getDateCarouselDataFromSortedData = (
 ) => {
   const days = options?.days ?? 30
   const startDate = options?.startDate ?? new Date()
-  
-  // Generate date range
+
+  if (sortedData && Object.keys(sortedData).length > 0) {
+    const sortedKeys = Object.keys(sortedData).sort()
+    const startKey = sortedKeys[0]
+    const endKey = sortedKeys[sortedKeys.length - 1]
+    const rangeStart = parseDateStringToLocal(startKey)
+    const rangeEnd = parseDateStringToLocal(endKey)
+
+    const dates: Date[] = []
+    const current = new Date(rangeStart)
+    while (current <= rangeEnd) {
+      dates.push(new Date(current))
+      current.setDate(current.getDate() + 1)
+    }
+
+    return dates.map((date) => {
+      const dateKey = getDateString(date)
+      const flightsForDate = sortedData[dateKey] || []
+      return {
+        date,
+        hasFlights: flightsForDate.length > 0,
+        flightCount: flightsForDate.length,
+      }
+    })
+  }
+
+  // Generate date range fallback when API data is missing
   const dates: Date[] = []
   for (let i = 0; i < days; i++) {
     const date = new Date(startDate)
@@ -49,16 +72,11 @@ const getDateCarouselDataFromSortedData = (
     dates.push(date)
   }
 
-  // Map dates to carousel format using sortedData
-  return dates.map((date) => {
-    const dateString = getDateString(date)
-    const flightsForDate = sortedData?.[dateString] || []
-    return {
-      date,
-      hasFlights: flightsForDate.length > 0,
-      flightCount: flightsForDate.length,
-    }
-  })
+  return dates.map((date) => ({
+    date,
+    hasFlights: false,
+    flightCount: 0
+  }))
 }
 
 
@@ -124,15 +142,14 @@ const SimpleDateCarousel = ({ dates, selectedDate, onDateSelect, onLoadNext }: a
                   key={`${groupIndex}-${index}`}
                   onClick={() => dateItem.hasFlights && onDateSelect(dateItem.date)}
                   disabled={!dateItem.hasFlights && !selected}
-                  className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[70px] sm:min-w-[80px] h-20 sm:h-24 rounded-lg border-2 transition-all ${
-                    selected
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                      : dateItem.hasFlights
+                  className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[70px] sm:min-w-[80px] h-20 sm:h-24 rounded-lg border-2 transition-all ${selected
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : dateItem.hasFlights
                       ? isPast
                         ? 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300'
                         : 'border-gray-200 bg-white text-gray-900 hover:border-blue-200 hover:bg-blue-50'
                       : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60'
-                  }`}
+                    }`}
                 >
                   <div className="text-xs font-medium mb-0.5 sm:mb-1">
                     {formatDate(dateItem.date)}
@@ -215,7 +232,7 @@ const TripsWorking = () => {
 
         if ('success' in response && response.success) {
           const userResponse = response as UserSpecificInfoResponse
-          
+
           // Use sortedData if available, otherwise fallback to flightsData
           const dataToUse = userResponse.data.sortedData || {}
           setSortedData(dataToUse)
@@ -285,12 +302,12 @@ const TripsWorking = () => {
   useEffect(() => {
     // Clear old flights first to prevent duplication
     setFlights([])
-    
+
     if (sortedData) {
       // Get date string in YYYY-MM-DD format
       const dateString = getDateString(selectedDate)
       const flightsForDate = sortedData[dateString] || []
-      
+
       // Transform flights to the format expected by FlightList
       const transformedFlights = flightsForDate.map(flight => ({
         id: flight.flightId,
@@ -310,12 +327,12 @@ const TripsWorking = () => {
         passengers: parseInt(flight.numberOfPassengers),
         aircraft: flight.airline,
         webCheckinStatus: flight.checkInStatus === 'NONE' ? 'Scheduled' :
-                         flight.checkInStatus === 'FAILED' ? 'Failed' : 'Completed' as any,
+          flight.checkInStatus === 'FAILED' ? 'Failed' : 'Completed' as any,
         flightType: flight.isInternational ? 'International' : 'Domestic' as any,
         ticketId: flight.ticketId,
         status: flight.checkInStatus === 'FAILED' ? 'Delayed' : 'On Time' as any
       }))
-      
+
       setFlights(transformedFlights)
     } else {
       // No sortedData available
@@ -340,7 +357,7 @@ const TripsWorking = () => {
       const refreshResponse = await getUserSpecificInfo()
       if ('success' in refreshResponse && refreshResponse.success) {
         const userResponse = refreshResponse as UserSpecificInfoResponse
-        
+
         // Use sortedData if available, otherwise fallback to empty object
         const dataToUse = userResponse.data.sortedData || {}
         setSortedData(dataToUse)
@@ -361,7 +378,7 @@ const TripsWorking = () => {
       const refreshResponse = await getUserSpecificInfo()
       if ('success' in refreshResponse && refreshResponse.success) {
         const userResponse = refreshResponse as UserSpecificInfoResponse
-        
+
         // Use sortedData if available, otherwise fallback to empty object
         const dataToUse = userResponse.data.sortedData || {}
         setSortedData(dataToUse)
@@ -409,7 +426,7 @@ const TripsWorking = () => {
             dates={dateCarouselData}
             selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
-            onLoadNext={handleLoadNext30Days}
+            onLoadNext={sortedData && Object.keys(sortedData).length > 0 ? undefined : handleLoadNext30Days}
           />
         </div>
 
